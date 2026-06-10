@@ -1,10 +1,16 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 const sendFoodPostNotification = async ({ adminEmail, donorName, foodName, quantity, locationAddress }) => {
-  const { data, error } = await resend.emails.send({
-    from: 'FeedForward <onboarding@resend.dev>',
+  const mailOptions = {
+    from: `"FeedForward" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
     subject: `🍱 New Food Donation Posted — ${foodName}`,
     html: `
@@ -21,16 +27,13 @@ const sendFoodPostNotification = async ({ adminEmail, donorName, foodName, quant
         <a href="${process.env.CLIENT_URL}/admin" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #2D6A4F; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Dashboard</a>
       </div>
     `
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  };
+  await transporter.sendMail(mailOptions);
 };
 
 const sendAgentAssignmentNotification = async ({ agentEmail, agentName, donorName, foodName, address, pickupTime }) => {
-  const { data, error } = await resend.emails.send({
-    from: 'FeedForward <onboarding@resend.dev>',
+  const mailOptions = {
+    from: `"FeedForward" <${process.env.EMAIL_USER}>`,
     to: agentEmail,
     subject: `🚴 New Delivery Assignment — ${foodName}`,
     html: `
@@ -47,11 +50,8 @@ const sendAgentAssignmentNotification = async ({ agentEmail, agentName, donorNam
         <a href="${process.env.CLIENT_URL}/agent" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #F4A261; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Dashboard</a>
       </div>
     `
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  };
+  await transporter.sendMail(mailOptions);
 };
 
 module.exports = { sendFoodPostNotification, sendAgentAssignmentNotification };
