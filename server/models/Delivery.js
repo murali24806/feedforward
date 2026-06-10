@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const deliverySchema = new mongoose.Schema({
   foodPostId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodPost', required: true },
   donorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   adminLocation: {
     lat: { type: Number, default: null },
