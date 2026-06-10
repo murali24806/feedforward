@@ -8,7 +8,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 export default function FoodPostForm() {
   const navigate = useNavigate();
   const { location, error: geoError, loading: geoLoading, getLocation } = useGeolocation();
-  const [form, setForm] = useState({ foodName: '', quantity: '', type: 'veg', expiryTime: '', description: '' });
+  const [form, setForm] = useState({ foodName: '', quantity: '', type: 'veg', expiryTime: '', description: '', address: '' });
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,10 +30,15 @@ export default function FoodPostForm() {
     setLoading(true); setError('');
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      Object.entries(form).forEach(([k, v]) => {
+        if (k === 'address' && !v) {
+          fd.append(k, `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
+        } else {
+          fd.append(k, v);
+        }
+      });
       fd.append('lat', location.lat);
       fd.append('lng', location.lng);
-      fd.append('address', `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
       if (photo) fd.append('photo', photo);
       const res = await postFood(fd);
       navigate(`/donor/track/${res.data._id}`);
@@ -112,6 +117,14 @@ export default function FoodPostForm() {
                 <label className="input-label">Description</label>
                 <textarea name="description" value={form.description} onChange={handle} rows={3}
                   placeholder="Any additional details about the food (allergens, storage, etc.)..."
+                  className="input-field resize-none" />
+              </div>
+
+              <div>
+                <label className="input-label">Pickup Address *</label>
+                <textarea name="address" value={form.address} onChange={handle} rows={2}
+                  placeholder="Enter complete pickup address (Door no, Street, Landmark)..."
+                  required
                   className="input-field resize-none" />
               </div>
             </div>
