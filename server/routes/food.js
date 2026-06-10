@@ -26,15 +26,15 @@ router.post('/post', protect, requireRole('donor'), upload.single('photo'), asyn
     try {
       const admins = await User.find({ role: 'admin' });
       for (const admin of admins) {
-        await sendFoodPostNotification({
+        sendFoodPostNotification({
           adminEmail: admin.email,
           donorName: req.user.name,
           foodName, quantity,
           locationAddress: address
-        });
+        }).catch(e => console.log("Email blocked by Render:", e.message));
       }
     } catch (emailErr) {
-      console.error('Email error:', emailErr.message);
+      console.error('Email setup error:', emailErr.message);
     }
 
     res.status(201).json(post);
@@ -106,16 +106,16 @@ router.put('/:id/accept', protect, requireRole('admin'), async (req, res) => {
 
     // Email agent
     try {
-      await sendAgentAssignmentNotification({
+      sendAgentAssignmentNotification({
         agentEmail: agent.email,
         agentName: agent.name,
         donorName: post.donorId.name,
         foodName: post.foodName,
         address: post.location?.address,
         pickupTime: post.createdAt
-      });
+      }).catch(e => console.log("Email blocked by Render:", e.message));
     } catch (emailErr) {
-      console.error('Email error:', emailErr.message);
+      console.error('Email setup error:', emailErr.message);
     }
 
     // Notify via socket
