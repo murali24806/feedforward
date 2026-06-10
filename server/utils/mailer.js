@@ -1,16 +1,10 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendFoodPostNotification = async ({ adminEmail, donorName, foodName, quantity, locationAddress }) => {
-  const mailOptions = {
-    from: `"FeedForward" <${process.env.EMAIL_USER}>`,
+  const { data, error } = await resend.emails.send({
+    from: 'FeedForward <onboarding@resend.dev>',
     to: adminEmail,
     subject: `🍱 New Food Donation Posted — ${foodName}`,
     html: `
@@ -27,13 +21,16 @@ const sendFoodPostNotification = async ({ adminEmail, donorName, foodName, quant
         <a href="${process.env.CLIENT_URL}/admin" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #2D6A4F; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Dashboard</a>
       </div>
     `
-  };
-  await transporter.sendMail(mailOptions);
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 };
 
 const sendAgentAssignmentNotification = async ({ agentEmail, agentName, donorName, foodName, address, pickupTime }) => {
-  const mailOptions = {
-    from: `"FeedForward" <${process.env.EMAIL_USER}>`,
+  const { data, error } = await resend.emails.send({
+    from: 'FeedForward <onboarding@resend.dev>',
     to: agentEmail,
     subject: `🚴 New Delivery Assignment — ${foodName}`,
     html: `
@@ -50,8 +47,11 @@ const sendAgentAssignmentNotification = async ({ agentEmail, agentName, donorNam
         <a href="${process.env.CLIENT_URL}/agent" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #F4A261; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Dashboard</a>
       </div>
     `
-  };
-  await transporter.sendMail(mailOptions);
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 };
 
 module.exports = { sendFoodPostNotification, sendAgentAssignmentNotification };
