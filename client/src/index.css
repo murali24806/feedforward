@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    background-color: #F9F9F9;
+    color: #282C3F;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #282C3F;
+  }
+}
+
+@layer components {
+
+  /* === BUTTONS === */
+  .btn-primary {
+    @apply bg-[#FC8019] text-white px-6 py-3 rounded-xl font-semibold text-base
+           hover:bg-[#E8720C] active:scale-95 transition-all duration-150
+           min-h-[48px] flex items-center justify-center gap-2
+           shadow-[0_4px_14px_rgba(252,128,25,0.35)];
+  }
+
+  .btn-secondary {
+    @apply bg-[#1BA672] text-white px-6 py-3 rounded-xl font-semibold text-base
+           hover:bg-[#138A5C] active:scale-95 transition-all duration-150
+           min-h-[48px] flex items-center justify-center gap-2
+           shadow-[0_4px_14px_rgba(27,166,114,0.30)];
+  }
+
+  .btn-outline {
+    @apply border-2 border-[#FC8019] text-[#FC8019] bg-white px-6 py-3 rounded-xl
+           font-semibold text-base hover:bg-[#FFF3E8] active:scale-95
+           transition-all duration-150 min-h-[48px] flex items-center justify-center gap-2;
+  }
+
+  .btn-ghost {
+    @apply text-[#FC8019] px-4 py-2 rounded-xl font-semibold text-base
+           hover:bg-[#FFF3E8] active:scale-95 transition-all duration-150
+           min-h-[44px] flex items-center justify-center gap-2;
+  }
+
+  /* === CARDS === */
+  .card {
+    @apply bg-white rounded-2xl shadow-[0_2px_8px_rgba(40,44,63,0.08)] p-5
+           border border-[#F0F0F0];
+  }
+
+  .card-hover {
+    @apply card hover:shadow-[0_4px_16px_rgba(40,44,63,0.14)] hover:-translate-y-0.5
+           transition-all duration-200 cursor-pointer;
+  }
+
+  /* === INPUTS === */
+  .input-field {
+    @apply w-full px-4 py-3.5 rounded-xl border-2 border-[#E8E8E8] bg-white
+           focus:outline-none focus:border-[#FC8019] focus:ring-4 focus:ring-[#FC8019]/10
+           transition-all duration-200 text-[#282C3F] text-base min-h-[52px]
+           placeholder:text-[#93959F];
+  }
+
+  .input-label {
+    @apply block text-sm font-semibold text-[#282C3F] mb-2;
+  }
+
+  /* === SIDEBAR === */
+  .sidebar {
+    @apply fixed left-0 top-0 h-full w-72 bg-[#282C3F] text-white z-40 flex flex-col;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+  }
+
+  .nav-item {
+    @apply flex items-center gap-4 px-5 py-4 mx-3 rounded-xl
+           font-medium text-base text-white/70
+           hover:bg-white/10 hover:text-white
+           cursor-pointer transition-all duration-200;
+  }
+
+  .nav-item.active {
+    @apply bg-[#FC8019] text-white shadow-[0_4px_12px_rgba(252,128,25,0.35)];
+  }
+
+  /* === BADGES === */
+  .badge {
+    @apply px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap;
+  }
+
+  .badge-green {
+    @apply badge bg-[#E8F8F2] text-[#1BA672];
+  }
+
+  .badge-orange {
+    @apply badge bg-[#FFF3E8] text-[#FC8019];
+  }
+
+  .badge-gray {
+    @apply badge bg-[#F4F4F4] text-[#686B78];
+  }
+
+  .badge-red {
+    @apply badge bg-red-50 text-red-600;
+  }
+
+  /* === STAT CARD === */
+  .stat-card {
+    @apply card text-center hover:shadow-[0_4px_16px_rgba(40,44,63,0.14)]
+           transition-all duration-200;
+  }
+
+  /* === SECTION HEADER === */
+  .section-header {
+    @apply font-display text-2xl font-bold text-[#282C3F];
+  }
+
+  /* === DIVIDER === */
+  .divider {
+    @apply border-t border-[#F0F0F0] my-4;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #F9F9F9; }
+::-webkit-scrollbar-thumb { background: #FC8019; border-radius: 3px; opacity: 0.6; }
+
+/* Leaflet */
+.leaflet-container {
+  border-radius: 16px;
+  z-index: 0;
+}
+
+/* Mobile bottom nav safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Focus ring for accessibility */
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid #FC8019;
+  outline-offset: 2px;
+}
