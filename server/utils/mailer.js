@@ -1,19 +1,35 @@
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+const sendBrevoEmail = async (toEmail, subject, htmlContent) => {
+  try {
+    await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: {
+          name: 'FeedForward',
+          email: process.env.EMAIL_USER // This must be the email you verified on Brevo
+        },
+        to: [{ email: toEmail }],
+        subject: subject,
+        htmlContent: htmlContent
+      },
+      {
+        headers: {
+          'accept': 'application/json',
+          'api-key': process.env.BREVO_API_KEY,
+          'content-type': 'application/json'
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Brevo API Error:", error.response ? error.response.data : error.message);
+    throw error;
   }
-});
+};
 
 const sendFoodPostNotification = async ({ adminEmail, donorName, foodName, quantity, locationAddress }) => {
-  const mailOptions = {
-    from: `"FeedForward" <${process.env.EMAIL_USER}>`,
-    to: adminEmail,
-    subject: `🍱 New Food Donation Posted — ${foodName}`,
-    html: `
+  const subject = `🍱 New Food Donation Posted — ${foodName}`;
+  const html = `
       <div style="font-family: DM Sans, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #FEFAE0; border-radius: 12px;">
         <h2 style="color: #2D6A4F; font-family: serif;">🌱 New Food Donation Alert</h2>
         <p style="color: #264653;">A new food donation has been posted on <strong>FeedForward</strong>.</p>
@@ -26,17 +42,13 @@ const sendFoodPostNotification = async ({ adminEmail, donorName, foodName, quant
         <p style="margin-top: 16px; color: #264653;">Please log in to your <strong>NGO Admin Dashboard</strong> to accept and assign a delivery agent.</p>
         <a href="${process.env.CLIENT_URL}/admin" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #2D6A4F; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Dashboard</a>
       </div>
-    `
-  };
-  await transporter.sendMail(mailOptions);
+  `;
+  await sendBrevoEmail(adminEmail, subject, html);
 };
 
 const sendAgentAssignmentNotification = async ({ agentEmail, agentName, donorName, foodName, address, pickupTime }) => {
-  const mailOptions = {
-    from: `"FeedForward" <${process.env.EMAIL_USER}>`,
-    to: agentEmail,
-    subject: `🚴 New Delivery Assignment — ${foodName}`,
-    html: `
+  const subject = `🚴 New Delivery Assignment — ${foodName}`;
+  const html = `
       <div style="font-family: DM Sans, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #FEFAE0; border-radius: 12px;">
         <h2 style="color: #2D6A4F; font-family: serif;">🚴 You Have a New Delivery!</h2>
         <p style="color: #264653;">Hi <strong>${agentName}</strong>, you have been assigned a new delivery on <strong>FeedForward</strong>.</p>
@@ -49,9 +61,8 @@ const sendAgentAssignmentNotification = async ({ agentEmail, agentName, donorNam
         <p style="margin-top: 16px; color: #264653;">Please open your <strong>Agent Dashboard</strong> to accept and start navigation.</p>
         <a href="${process.env.CLIENT_URL}/agent" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #F4A261; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Dashboard</a>
       </div>
-    `
-  };
-  await transporter.sendMail(mailOptions);
+  `;
+  await sendBrevoEmail(agentEmail, subject, html);
 };
 
 module.exports = { sendFoodPostNotification, sendAgentAssignmentNotification };
