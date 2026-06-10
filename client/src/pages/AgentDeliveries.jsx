@@ -179,14 +179,17 @@ export default function AgentDeliveries() {
     return null;
   };
 
-  const resolveDonorLoc = (sel) => {
+  const resolveTargetLoc = (sel) => {
     if (!sel) return null;
+    if (sel.status === 'picked_up') {
+      return sel.adminLocation && isValidLoc(sel.adminLocation) ? sel.adminLocation : null;
+    }
     const candidates = [sel?.foodPostId?.location, sel?.donorId?.location];
     for (const c of candidates) { if (isValidLoc(c)) return c; }
     return null;
   };
 
-  const donorLoc = resolveDonorLoc(selected);
+  const targetLoc = resolveTargetLoc(selected);
   const showMap  = selected && !['delivered','rejected_by_agent'].includes(selected.status);
 
   return (
@@ -258,9 +261,9 @@ export default function AgentDeliveries() {
                     <p className="text-sm text-[#93959F] mt-1">
                       📍 {selected.donorId?.address || selected.foodPostId?.location?.address || 'Location on map below'}
                     </p>
-                    {donorLoc && (
+                    {targetLoc && selected.status !== 'picked_up' && (
                       <p className="text-xs text-[#D0D0D0] mt-0.5">
-                        Coords: {Number(donorLoc.lat).toFixed(5)}, {Number(donorLoc.lng).toFixed(5)}
+                        Coords: {Number(targetLoc.lat).toFixed(5)}, {Number(targetLoc.lng).toFixed(5)}
                       </p>
                     )}
                   </div>
@@ -282,6 +285,30 @@ export default function AgentDeliveries() {
                 )}
               </div>
 
+              {/* Admin info */}
+              {selected.adminId && (
+                <div className="card mt-4">
+                  <h3 className="font-display text-xl font-bold text-[#282C3F] mb-4">Drop-off Details</h3>
+                  <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
+                    <div className="w-14 h-14 rounded-2xl bg-[#FC8019] overflow-hidden flex items-center justify-center flex-shrink-0 shadow-md">
+                      {selected.adminId.profilePhoto
+                        ? <img src={selected.adminId.profilePhoto} alt="" className="w-full h-full object-cover"/>
+                        : <span className="text-white text-2xl font-bold">{selected.adminId.organizationName?.[0] || selected.adminId.name?.[0]}</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[#282C3F] text-lg">{selected.adminId.organizationName || selected.adminId.name}</p>
+                      <p className="text-sm text-[#686B78]">Contact: {selected.adminId.name}</p>
+                      <a href={`tel:${selected.adminId.phone}`} className="text-sm text-[#FC8019] font-semibold hover:underline">
+                        📞 {selected.adminId.phone}
+                      </a>
+                      <p className="text-sm text-[#93959F] mt-1">
+                        📍 {selected.adminLocation?.address || selected.adminId.address || 'Location on map'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ── MAP ── */}
               {showMap && (
                 <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} className="card p-0 overflow-hidden">
@@ -290,7 +317,7 @@ export default function AgentDeliveries() {
                     <div>
                       <h3 className="font-semibold text-[#282C3F]">🗺️ Navigation Map</h3>
                       <p className="text-xs text-[#93959F] mt-0.5">
-                        {selected.status === 'in_transit' ? 'Live GPS active — heading to donor' : 'Route to pickup location'}
+                        {selected.status === 'in_transit' ? 'Live GPS active — heading to donor' : selected.status === 'picked_up' ? 'Live GPS active — heading to admin drop-off' : 'Route to destination'}
                       </p>
                     </div>
                     {/* GPS toggle */}
@@ -320,7 +347,7 @@ export default function AgentDeliveries() {
                   <div className="p-4">
                     <LiveMap
                       agentLocation={agentLocation}
-                      donorLocation={donorLoc}
+                      donorLocation={targetLoc}
                       height="340px"
                       showETA={true}
                       mode="agent"
@@ -341,8 +368,8 @@ export default function AgentDeliveries() {
                       <div className="w-8 h-1 rounded bg-[#FC8019]"/>
                       <span>Route</span>
                     </div>
-                    {!isValidLoc(donorLoc) && (
-                      <span className="text-amber-500">⚠️ Pickup location not saved for this order</span>
+                    {!isValidLoc(targetLoc) && (
+                      <span className="text-amber-500">⚠️ Destination location not saved for this order</span>
                     )}
                   </div>
                 </motion.div>

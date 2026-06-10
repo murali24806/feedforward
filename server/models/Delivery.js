@@ -3,7 +3,13 @@ const mongoose = require('mongoose');
 const deliverySchema = new mongoose.Schema({
   foodPostId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodPost', required: true },
   donorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  adminLocation: {
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null },
+    address: { type: String, default: '' }
+  },
   status: {
     type: String,
     enum: ['assigned', 'accepted', 'in_transit', 'picked_up', 'delivered', 'rejected_by_agent'],

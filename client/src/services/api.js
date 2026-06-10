@@ -29,6 +29,7 @@ export const getProfile = () => API.get('/users/profile');
 export const updateProfile = (data) => API.put('/users/profile', data);
 export const getDonors = () => API.get('/users/donors');
 export const getAgents = () => API.get('/users/agents');
+export const getAdmins = () => API.get('/users/admins');
 export const getUserById = (id) => API.get(`/users/${id}`);
 
 // Food
@@ -36,7 +37,7 @@ export const postFood = (data) => API.post('/food/post', data);
 export const getAllFood = () => API.get('/food/all');
 export const getMyFood = () => API.get('/food/my');
 export const getFoodById = (id) => API.get(`/food/${id}`);
-export const acceptFood = (id, agentId) => API.put(`/food/${id}/accept`, { agentId });
+export const acceptFood = (id, agentId, adminLocation) => API.put(`/food/${id}/accept`, { agentId, adminLocation });
 export const rejectFood = (id) => API.put(`/food/${id}/reject`);
 
 // Delivery

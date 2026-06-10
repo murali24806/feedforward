@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const foodPostSchema = new mongoose.Schema({
   donorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   foodName: { type: String, required: true },
   quantity: { type: String, required: true },
   type: { type: String, enum: ['veg', 'non-veg'], required: true },

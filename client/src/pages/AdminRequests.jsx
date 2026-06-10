@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '../components/DashboardLayout';
 import LiveMap from '../components/LiveMap';
 import { getAllFood, getAgents, acceptFood, rejectFood } from '../services/api';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 const statusColors = {
   pending: 'badge-orange', accepted: 'badge-green', agent_assigned: 'badge-green',
@@ -21,9 +22,11 @@ export default function AdminRequests() {
   const [assignAgentId, setAssignAgentId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
+  const { location: adminLoc, error: geoError, loading: geoLoading, getLocation } = useGeolocation();
   const detailRef = useRef(null);
 
   useEffect(() => {
+    getLocation(); // get admin location on mount
     const fetch = async () => {
       try {
         const [foodRes, agentsRes] = await Promise.all([getAllFood(), getAgents()]);
@@ -37,9 +40,14 @@ export default function AdminRequests() {
 
   const handleAccept = async (postId) => {
     if (!assignAgentId) { alert('Please select an agent first'); return; }
+    if (!adminLoc) { 
+      alert('Please allow location access to assign an agent. The agent needs your location to deliver the food.'); 
+      getLocation();
+      return; 
+    }
     setActionLoading(true);
     try {
-      await acceptFood(postId, assignAgentId);
+      await acceptFood(postId, assignAgentId, { lat: adminLoc.lat, lng: adminLoc.lng, address: 'Admin Location' });
       setPosts(p => p.map(post => post._id === postId ? { ...post, status: 'agent_assigned' } : post));
       setSelected(null);
     } catch (err) {
@@ -186,6 +194,30 @@ export default function AdminRequests() {
               {selected.status === 'pending' && (
                 <div className="card space-y-4">
                   <h4 className="font-display font-semibold text-[#282C3F] text-base">Assign Delivery Agent</h4>
+
+                  {/* Admin Location Status */}
+                  <div className="bg-[#F9F9F9] p-3 rounded-xl border border-[#E8E8E8]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-[#686B78]">Your Location (Drop-off)</span>
+                      <button onClick={getLocation} className="text-xs font-semibold text-[#FC8019] hover:underline flex items-center gap-1">
+                        {geoLoading ? '⏳ Fetching...' : '🔄 Refresh'}
+                      </button>
+                    </div>
+                    {adminLoc ? (
+                      <div className="flex items-center gap-2 text-sm text-[#1BA672] bg-[#E8F8F2] px-3 py-2 rounded-lg">
+                        <span>✅</span> <span>Captured: {adminLoc.lat.toFixed(4)}, {adminLoc.lng.toFixed(4)}</span>
+                      </div>
+                    ) : geoError ? (
+                      <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                        ⚠️ {geoError}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                        ⚠️ Waiting for location...
+                      </div>
+                    )}
+                  </div>
+
                   <select value={assignAgentId} onChange={e => setAssignAgentId(e.target.value)} className="input-field">
                     <option value="">Select available agent...</option>
                     {availableAgents.map(a => (

@@ -14,6 +14,7 @@ router.get('/my', protect, requireRole('agent'), async (req, res) => {
     })
       .populate('foodPostId')
       .populate('donorId', 'name phone address profilePhoto')
+      .populate('adminId', 'name organizationName phone profilePhoto address')
       .sort({ createdAt: -1 });
     res.json(deliveries);
   } catch (err) {
@@ -28,6 +29,7 @@ router.get('/all', protect, requireRole('admin'), async (req, res) => {
       .populate('foodPostId')
       .populate('donorId', 'name phone')
       .populate('agentId', 'name phone profilePhoto')
+      .populate('adminId', 'name organizationName phone')
       .sort({ createdAt: -1 });
     res.json(deliveries);
   } catch (err) {
@@ -44,6 +46,7 @@ router.get('/donor/my', protect, requireRole('donor'), async (req, res) => {
     })
       .populate('foodPostId')
       .populate('agentId', 'name phone profilePhoto vehicleType')
+      .populate('adminId', 'name organizationName phone')
       .sort({ createdAt: -1 });
     res.json(deliveries);
   } catch (err) {
@@ -57,7 +60,8 @@ router.get('/:id', protect, async (req, res) => {
     const delivery = await Delivery.findById(req.params.id)
       .populate('foodPostId')
       .populate('donorId', 'name phone address profilePhoto')
-      .populate('agentId', 'name phone profilePhoto vehicleType');
+      .populate('agentId', 'name phone profilePhoto vehicleType')
+      .populate('adminId', 'name organizationName phone profilePhoto address');
     if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
     res.json(delivery);
   } catch (err) {

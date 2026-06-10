@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
   profilePhoto: { type: String, default: '' },
   address: { type: String, default: '' },
   bio: { type: String, default: '' },
+  organizationName: { type: String, default: '' }, // for admins
   points: { type: Number, default: 0 },
   vehicleType: { type: String, default: '' }, // for agents
   isAvailable: { type: Boolean, default: true }, // for agents

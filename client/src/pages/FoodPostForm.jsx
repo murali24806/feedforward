@@ -2,20 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import DashboardLayout from '../components/DashboardLayout';
-import { postFood } from '../services/api';
+import { postFood, getAdmins } from '../services/api';
 import { useGeolocation } from '../hooks/useGeolocation';
 
 export default function FoodPostForm() {
   const navigate = useNavigate();
   const { location, error: geoError, loading: geoLoading, getLocation } = useGeolocation();
-  const [form, setForm] = useState({ foodName: '', quantity: '', type: 'veg', expiryTime: '', description: '', address: '' });
+  const [form, setForm] = useState({ foodName: '', quantity: '', type: 'veg', expiryTime: '', description: '', address: '', adminId: '' });
   const [photo, setPhoto] = useState(null);
+  const [admins, setAdmins] = useState([]);
   const [preview, setPreview] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef();
 
-  useEffect(() => { getLocation(); }, []);
+  useEffect(() => { 
+    getLocation(); 
+    getAdmins().then(res => setAdmins(res.data)).catch(console.error);
+  }, []);
 
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -81,6 +85,19 @@ export default function FoodPostForm() {
             {/* Food details */}
             <div className="card space-y-5">
               <h3 className="font-display font-semibold text-[#282C3F] text-lg">Food Details</h3>
+              
+              <div>
+                <label className="input-label">Donate To (Organization) *</label>
+                <select name="adminId" value={form.adminId} onChange={handle} required className="input-field">
+                  <option value="">Select an organization...</option>
+                  {admins.map(admin => (
+                    <option key={admin._id} value={admin._id}>
+                      {admin.organizationName ? `${admin.organizationName} (${admin.name})` : admin.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="input-label">Food Name *</label>

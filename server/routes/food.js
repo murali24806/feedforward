@@ -10,22 +10,27 @@ const { sendFoodPostNotification, sendAgentAssignmentNotification } = require('.
 // POST /api/food/post — donor posts food
 router.post('/post', protect, requireRole('donor'), upload.single('photo'), async (req, res) => {
   try {
-    const { foodName, quantity, type, expiryTime, description, lat, lng, address } = req.body;
+    const { foodName, quantity, type, expiryTime, description, lat, lng, address, adminId } = req.body;
+    if (!adminId) return res.status(400).json({ message: 'Admin/Organization selection is required' });
+
     const post = await FoodPost.create({
       donorId: req.user._id,
+      adminId,
       foodName, quantity, type, expiryTime, description,
       photo: req.file ? req.file.path : '',
       location: { lat: parseFloat(lat), lng: parseFloat(lng), address },
       timestamps: [{ step: 'Food Posted', time: new Date() }]
     });
 
-    // Notify admin via Socket.IO
-    req.io.to('admin:room').emit('food:newPost', { post, donorName: req.user.name });
+    // Notify specific admin via Socket.IO
+    req.io.to(`admin:${adminId}`).emit('food:newPost', { post, donorName: req.user.name });
+    // Also fallback emit to generic admin room if needed, but per requirements we only notify the specific one.
 
-    // Email NGO admins
+    // Email specific NGO admin
+    // Email specific NGO admin
     try {
-      const admins = await User.find({ role: 'admin' });
-      for (const admin of admins) {
+      const admin = await User.findById(adminId);
+      if (admin) {
         sendFoodPostNotification({
           adminEmail: admin.email,
           donorName: req.user.name,
@@ -43,10 +48,10 @@ router.post('/post', protect, requireRole('donor'), upload.single('photo'), asyn
   }
 });
 
-// GET /api/food/all — admin sees all posts
+// GET /api/food/all — admin sees all posts (filtered by their adminId)
 router.get('/all', protect, requireRole('admin'), async (req, res) => {
   try {
-    const posts = await FoodPost.find().populate('donorId', 'name email phone profilePhoto').populate('agentId', 'name phone profilePhoto').sort({ createdAt: -1 });
+    const posts = await FoodPost.find({ adminId: req.user._id }).populate('donorId', 'name email phone profilePhoto').populate('agentId', 'name phone profilePhoto').sort({ createdAt: -1 });
     res.json(posts);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -77,10 +82,11 @@ router.get('/:id', protect, async (req, res) => {
 // PUT /api/food/:id/accept — admin accepts + assigns agent
 router.put('/:id/accept', protect, requireRole('admin'), async (req, res) => {
   try {
-    const { agentId } = req.body;
+    const { agentId, adminLocation } = req.body;
     const post = await FoodPost.findById(req.params.id).populate('donorId', 'name email');
     if (!post) return res.status(404).json({ message: 'Post not found' });
     if (post.status !== 'pending') return res.status(400).json({ message: 'Post already processed' });
+    if (post.adminId.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Not assigned to you' });
 
     const agent = await User.findById(agentId);
     if (!agent || agent.role !== 'agent') return res.status(400).json({ message: 'Invalid agent' });
@@ -89,7 +95,9 @@ router.put('/:id/accept', protect, requireRole('admin'), async (req, res) => {
     const delivery = await Delivery.create({
       foodPostId: post._id,
       donorId: post.donorId._id,
+      adminId: req.user._id,
       agentId,
+      adminLocation,
       statusHistory: [{ status: 'assigned', time: new Date() }]
     });
 

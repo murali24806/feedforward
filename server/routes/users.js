@@ -32,6 +32,16 @@ router.get('/donors', protect, requireRole('admin'), async (req, res) => {
   }
 });
 
+// GET /api/users/admins
+router.get('/admins', protect, async (req, res) => {
+  try {
+    const admins = await User.find({ role: 'admin' }).select('-password');
+    res.json(admins);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // GET /api/users/agents (admin only)
 router.get('/agents', protect, requireRole('admin'), async (req, res) => {
   try {
