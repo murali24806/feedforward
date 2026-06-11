@@ -15,6 +15,7 @@ export default function AdminTracking() {
   const mapInstanceRef  = useRef(null);
   const agentMarkersRef = useRef({});   // agentId  → Leaflet marker
   const donorMarkersRef = useRef({});   // deliveryId → Leaflet marker
+  const adminMarkersRef = useRef({});   // deliveryId → Leaflet marker
   const routeLinesRef   = useRef({});   // deliveryId → Leaflet polyline group
   const initRef         = useRef(false);
 
@@ -100,6 +101,7 @@ export default function AdminTracking() {
         mapInstanceRef.current = null;
         agentMarkersRef.current = {};
         donorMarkersRef.current = {};
+        adminMarkersRef.current = {};
         routeLinesRef.current   = {};
         initRef.current = false;
       }
@@ -114,23 +116,41 @@ export default function AdminTracking() {
     if (!L || !map) return;
 
     activeDeliveries.forEach(del => {
-      if (donorMarkersRef.current[del._id]) return; // already painted
+      if (!donorMarkersRef.current[del._id]) {
+        const loc = del.foodPostId?.location;
+        if (isValidLoc(loc)) {
+          const icon = L.divIcon({
+            html: `<div style="
+              width:42px;height:42px;background:#1BA672;border-radius:50%;
+              border:3px solid white;display:flex;align-items:center;justify-content:center;
+              font-size:18px;box-shadow:0 4px 12px rgba(27,166,114,0.5)">🏠</div>`,
+            className: '', iconSize: [42,42], iconAnchor: [21,21],
+          });
 
-      const loc = del.foodPostId?.location;
-      if (!isValidLoc(loc)) return;
+          donorMarkersRef.current[del._id] = L.marker(
+            [Number(loc.lat), Number(loc.lng)], { icon }
+          ).addTo(map)
+           .bindPopup(`<b>📍 ${del.foodPostId?.foodName || 'Pickup'}</b><br/>Donor: ${del.donorId?.name || '—'}`);
+        }
+      }
 
-      const icon = L.divIcon({
-        html: `<div style="
-          width:42px;height:42px;background:#1BA672;border-radius:50%;
-          border:3px solid white;display:flex;align-items:center;justify-content:center;
-          font-size:18px;box-shadow:0 4px 12px rgba(27,166,114,0.5)">🏠</div>`,
-        className: '', iconSize: [42,42], iconAnchor: [21,21],
-      });
+      if (del.status === 'picked_up' && !adminMarkersRef.current[del._id]) {
+        const loc = del.adminLocation;
+        if (isValidLoc(loc)) {
+          const icon = L.divIcon({
+            html: `<div style="
+              width:42px;height:42px;background:#3B82F6;border-radius:50%;
+              border:3px solid white;display:flex;align-items:center;justify-content:center;
+              font-size:18px;box-shadow:0 4px 12px rgba(59,130,246,0.5)">🏢</div>`,
+            className: '', iconSize: [42,42], iconAnchor: [21,21],
+          });
 
-      donorMarkersRef.current[del._id] = L.marker(
-        [Number(loc.lat), Number(loc.lng)], { icon }
-      ).addTo(map)
-       .bindPopup(`<b>📍 ${del.foodPostId?.foodName || 'Pickup'}</b><br/>Donor: ${del.donorId?.name || '—'}`);
+          adminMarkersRef.current[del._id] = L.marker(
+            [Number(loc.lat), Number(loc.lng)], { icon }
+          ).addTo(map)
+           .bindPopup(`<b>📍 Drop-off</b><br/>Admin Location`);
+        }
+      }
     });
   }, [activeDeliveries, initRef.current]);
 
@@ -186,19 +206,23 @@ export default function AdminTracking() {
           .bindPopup(`<b>🚴 ${name}</b><br/>${phone}<br/><span style="color:#FC8019;font-size:11px">● Live GPS</span>`);
       }
 
-      // Draw straight dashed line agent → donor pickup (refreshes each update)
+      // Draw straight dashed line agent → destination (refreshes each update)
       if (deliveryId) {
         const d = deliveriesRef.current.find(x => x._id === deliveryId);
-        const donorLoc = d?.foodPostId?.location;
-        if (isValidLoc(donorLoc)) {
+        let targetLoc = d?.foodPostId?.location;
+        if (d?.status === 'picked_up' && isValidLoc(d?.adminLocation)) {
+          targetLoc = d.adminLocation;
+        }
+
+        if (isValidLoc(targetLoc)) {
           if (routeLinesRef.current[deliveryId]) {
             routeLinesRef.current[deliveryId].setLatLngs([
               [lat, lng],
-              [Number(donorLoc.lat), Number(donorLoc.lng)],
+              [Number(targetLoc.lat), Number(targetLoc.lng)],
             ]);
           } else {
             routeLinesRef.current[deliveryId] = L.polyline(
-              [[lat, lng], [Number(donorLoc.lat), Number(donorLoc.lng)]],
+              [[lat, lng], [Number(targetLoc.lat), Number(targetLoc.lng)]],
               { color: '#FC8019', weight: 3, dashArray: '10 6', opacity: 0.9 }
             ).addTo(map);
           }
@@ -215,11 +239,14 @@ export default function AdminTracking() {
 
     const agentId  = del.agentId?._id || del.agentId;
     const agentLoc = agentLocations[agentId];
-    const donorLoc = del.foodPostId?.location;
+    let targetLoc = del.foodPostId?.location;
+    if (del.status === 'picked_up' && isValidLoc(del.adminLocation)) {
+      targetLoc = del.adminLocation;
+    }
     const points   = [];
 
     if (agentLoc) points.push([Number(agentLoc.lat), Number(agentLoc.lng)]);
-    if (isValidLoc(donorLoc)) points.push([Number(donorLoc.lat), Number(donorLoc.lng)]);
+    if (isValidLoc(targetLoc)) points.push([Number(targetLoc.lat), Number(targetLoc.lng)]);
 
     if (points.length >= 2) {
       map.fitBounds(points, { padding: [80, 80], animate: true });
@@ -253,7 +280,6 @@ export default function AdminTracking() {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="flex gap-5 mb-4 text-sm text-[#686B78] flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-[#FC8019] flex items-center justify-center text-white text-xs font-bold shadow-md">A</div>
@@ -264,8 +290,12 @@ export default function AdminTracking() {
           <span>Donor — pickup location</span>
         </div>
         <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-[#3B82F6] flex items-center justify-center text-sm shadow-md">🏢</div>
+          <span>Admin — drop-off location</span>
+        </div>
+        <div className="flex items-center gap-2">
           <div className="w-10 h-0 border-t-2 border-dashed border-[#FC8019]" />
-          <span>Route line (agent → pickup)</span>
+          <span>Route line</span>
         </div>
       </div>
 

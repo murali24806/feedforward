@@ -140,8 +140,16 @@ export default function DonorTrackPage() {
   const showMap = selected && ['accepted', 'agent_assigned', 'in_transit', 'picked_up'].includes(selected.status);
   // Use agent location from socket OR from saved delivery record
   const mapAgentLoc = agentLocation || (isValidLocation(delivery?.agentLocation) ? delivery.agentLocation : null);
-  // Donor / pickup location
-  const mapDonorLoc = isValidLocation(selected?.location) ? selected.location : null;
+  
+  // Resolve target location based on status
+  const resolveTargetLoc = (post, del) => {
+    if (post?.status === 'picked_up') {
+      return del?.adminLocation && isValidLocation(del.adminLocation) ? del.adminLocation : null;
+    }
+    return isValidLocation(post?.location) ? post.location : null;
+  };
+  
+  const mapDonorLoc = resolveTargetLoc(selected, delivery);
 
   return (
     <DashboardLayout title="My Donations">
