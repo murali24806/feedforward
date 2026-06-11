@@ -145,8 +145,8 @@ export default function LoginPage() {
               {tab === 'register' && (
                 <>
                   <div>
-                    <label className="input-label">Full Name</label>
-                    <input name="name" value={form.name} onChange={handle} placeholder="John Doe" required className="input-field" />
+                    <label className="input-label">{role === 'admin' ? 'Organization Name' : 'Full Name'}</label>
+                    <input name="name" value={form.name} onChange={handle} placeholder={role === 'admin' ? 'Feed the Needy NGO' : 'John Doe'} required className="input-field" />
                   </div>
                   <div>
                     <label className="input-label">Phone Number</label>

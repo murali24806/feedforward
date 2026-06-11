@@ -61,7 +61,7 @@ export default function ProfileEditor() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">Full Name</label>
+            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">{user?.role === 'admin' ? 'Organization Name' : 'Full Name'}</label>
             <input name="name" value={form.name} onChange={handle} className="input-field" required />
           </div>
           <div>
