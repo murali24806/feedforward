@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import DashboardLayout from '../components/DashboardLayout';
 import LiveMap from '../components/LiveMap';
-import { getMyDeliveries, updateDeliveryStatus, rejectDelivery, removeDelivery } from '../services/api';
+import { getMyDeliveries, updateDeliveryStatus, rejectDelivery, removeDelivery, completeDelivery } from '../services/api';
 import { getSocket } from '../services/socket';
 
 const STEPS = [
@@ -51,6 +51,8 @@ export default function AgentDeliveries() {
   const [geoError, setGeoError]             = useState('');
   const watchIdRef   = useRef(null);
   const detailRef    = useRef(null); // for mobile scroll
+  const [deliveryPhotoFile, setDeliveryPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   /* fetch */
   useEffect(() => {
@@ -143,6 +145,23 @@ export default function AgentDeliveries() {
     } catch (err) { alert(err.response?.data?.message || 'Failed'); }
     finally { setActionLoading(false); }
   };
+
+  const handleComplete = async () => {
+    if (!selected || !deliveryPhotoFile) return;
+    setActionLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('deliveryPhoto', deliveryPhotoFile);
+      await completeDelivery(selected._id, formData);
+      const updated = { ...selected, status: 'delivered', deliveryPhoto: photoPreview };
+      setSelected(updated);
+      setDeliveries(ds => ds.map(d => d._id === selected._id ? updated : d));
+      setLiveEnabled(false);
+      getSocket().emit('delivery:statusChanged', { deliveryId: selected._id, status: 'delivered' });
+    } catch (err) { alert(err.response?.data?.message || 'Failed'); }
+    finally { setActionLoading(false); }
+  };
+
 
   const handleReject = async () => {
     if (!selected) return;
@@ -424,20 +443,49 @@ export default function AgentDeliveries() {
 
                 {selected.status !== 'delivered' && selected.status !== 'assigned' && selected.status !== 'rejected_by_agent' && (() => {
                   const action = getNextAction(selected.status);
-                  return action ? (
-                    <motion.button initial={{opacity:0,y:10}} animate={{opacity:1,y:0}}
-                      onClick={() => updateStatus(action.next)} disabled={actionLoading}
-                      className="btn-secondary w-full mt-6 text-base disabled:opacity-60">
-                      {actionLoading
-                        ? <span className="flex items-center justify-center gap-2">
-                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                            </svg>Updating...
-                          </span>
-                        : action.label}
-                    </motion.button>
-                  ) : null;
+                  if (!action) return null;
+                  const isDelivering = action.next === 'delivered';
+
+                  return (
+                    <div className="mt-6">
+                      {isDelivering && (
+                        <div className="mb-4">
+                          <label className="block text-sm font-semibold text-[#282C3F] mb-2">Upload Delivery Photo (Required)</label>
+                          <div className="flex items-center gap-4">
+                            <label className="cursor-pointer bg-gray-50 border border-gray-200 hover:bg-gray-100 text-[#686B78] px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                              <span>📸 Take/Choose Photo</span>
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  setDeliveryPhotoFile(file);
+                                  setPhotoPreview(URL.createObjectURL(file));
+                                }
+                              }} />
+                            </label>
+                          </div>
+                          {photoPreview && (
+                            <div className="mt-3 relative inline-block">
+                              <img src={photoPreview} alt="Preview" className="w-32 h-32 object-cover rounded-xl border border-gray-200" />
+                              <button onClick={() => { setDeliveryPhotoFile(null); setPhotoPreview(null); }} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs shadow-md">✕</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <motion.button initial={{opacity:0,y:10}} animate={{opacity:1,y:0}}
+                        onClick={() => isDelivering ? handleComplete() : updateStatus(action.next)} 
+                        disabled={actionLoading || (isDelivering && !deliveryPhotoFile)}
+                        className="btn-secondary w-full text-base disabled:opacity-60 disabled:cursor-not-allowed">
+                        {actionLoading
+                          ? <span className="flex items-center justify-center gap-2">
+                              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                              </svg>Updating...
+                            </span>
+                          : action.label}
+                      </motion.button>
+                    </div>
+                  );
                 })()}
 
                 {selected.status === 'rejected_by_agent' && (

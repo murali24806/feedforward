@@ -45,6 +45,7 @@ export const getMyDeliveries = () => API.get('/delivery/my');
 export const getAllDeliveries = () => API.get('/delivery/all');
 export const getDeliveryById = (id) => API.get(`/delivery/${id}`);
 export const updateDeliveryStatus = (id, status) => API.put(`/delivery/${id}/status`, { status });
+export const completeDelivery = (id, formData) => API.put(`/delivery/${id}/complete`, formData);
 export const rejectDelivery = (id) => API.put(`/delivery/${id}/reject`);
 export const removeDelivery = (id) => API.delete(`/delivery/${id}/remove`);
 export const getDonorDeliveries = () => API.get('/delivery/donor/my');

@@ -4,6 +4,7 @@ const Delivery = require('../models/Delivery');
 const FoodPost = require('../models/FoodPost');
 const User = require('../models/User');
 const { protect, requireRole } = require('../middleware/auth');
+const { upload } = require('../utils/cloudinary');
 
 // GET /api/delivery/my — agent's deliveries (filtered: exclude removed by agent)
 router.get('/my', protect, requireRole('agent'), async (req, res) => {
@@ -155,6 +156,52 @@ router.put('/:id/status', protect, requireRole('agent'), async (req, res) => {
       time: new Date()
     });
     req.io.to('admin:room').emit('delivery:statusChanged', { deliveryId: delivery._id, status });
+
+    res.json(delivery);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /api/delivery/:id/complete — agent completes delivery with photo
+router.put('/:id/complete', protect, requireRole('agent'), (req, res, next) => {
+  upload.single('deliveryPhoto')(req, res, function (err) {
+    if (err) {
+      console.error('Upload Error:', err);
+      return res.status(400).json({ message: err.message || JSON.stringify(err) || 'Upload error' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const delivery = await Delivery.findById(req.params.id);
+    if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
+    if (delivery.agentId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not your delivery' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'Delivery photo is required' });
+    }
+
+    delivery.status = 'delivered';
+    delivery.deliveryPhoto = req.file.path;
+    delivery.statusHistory.push({ status: 'delivered', time: new Date() });
+    await delivery.save();
+
+    await FoodPost.findByIdAndUpdate(delivery.foodPostId, {
+      status: 'delivered',
+      $push: { timestamps: { step: 'Delivered', time: new Date() } }
+    });
+
+    await User.findByIdAndUpdate(req.user._id, { isAvailable: true });
+
+    req.io.to(`delivery:${delivery._id}`).emit('delivery:statusChanged', {
+      deliveryId: delivery._id,
+      status: 'delivered',
+      step: 'Delivered',
+      time: new Date()
+    });
+    req.io.to('admin:room').emit('delivery:statusChanged', { deliveryId: delivery._id, status: 'delivered' });
 
     res.json(delivery);
   } catch (err) {

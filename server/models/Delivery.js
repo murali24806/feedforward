@@ -20,6 +20,7 @@ const deliverySchema = new mongoose.Schema({
     lat: { type: Number, default: null },
     lng: { type: Number, default: null }
   },
+  deliveryPhoto: { type: String, default: null },
   statusHistory: [{ status: String, time: { type: Date, default: Date.now } }],
   createdAt: { type: Date, default: Date.now }
 });

@@ -12,7 +12,6 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'feedforward',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [{ width: 800, crop: 'limit' }]
   }
 });

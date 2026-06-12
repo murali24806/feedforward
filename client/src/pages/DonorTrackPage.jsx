@@ -321,6 +321,14 @@ export default function DonorTrackPage() {
                   <div className="text-5xl mb-3">🎉</div>
                   <h3 className="font-display text-2xl font-bold">Successfully Delivered!</h3>
                   <p className="text-white/70 mt-2">Your food reached someone in need. Thank you!</p>
+                  {delivery?.deliveryPhoto && (
+                    <div className="mt-4 flex justify-center">
+                      <div className="bg-white/20 p-2 rounded-2xl">
+                        <img src={delivery.deliveryPhoto} alt="Delivery Proof" className="w-48 h-48 object-cover rounded-xl shadow-lg border-2 border-white/30" />
+                        <p className="text-xs text-white/80 mt-2 font-medium">Delivery Proof</p>
+                      </div>
+                    </div>
+                  )}
                   {delivery?._id && (
                     <button
                       onClick={async () => {

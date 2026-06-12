@@ -103,6 +103,12 @@ export default function AdminDeliveries() {
                           </button>
                         )}
                       </div>
+                      {del.deliveryPhoto && (
+                        <div className="mt-3">
+                          <p className="text-[10px] text-[#93959F] mb-1 font-semibold">Delivery Proof</p>
+                          <img src={del.deliveryPhoto} alt="Proof" className="w-full h-24 object-cover rounded-lg border border-gray-100 shadow-sm" />
+                        </div>
+                      )}
                     </motion.div>
                   ))}
                   {items.length === 0 && (
@@ -142,6 +148,11 @@ export default function AdminDeliveries() {
                       'bg-[#F4F4F4] text-gray-600'}`}>
                       {del.status.replace(/_/g, ' ')}
                     </span>
+                    {del.deliveryPhoto && (
+                      <a href={del.deliveryPhoto} target="_blank" rel="noreferrer" className="block mt-1 text-[10px] text-blue-500 hover:underline">
+                        View Photo
+                      </a>
+                    )}
                   </td>
                   <td className="py-3 pr-4 text-xs text-[#93959F]">{new Date(del.createdAt).toLocaleDateString()}</td>
                   <td className="py-3">
