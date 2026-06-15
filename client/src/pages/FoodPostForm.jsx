@@ -96,6 +96,11 @@ export default function FoodPostForm() {
                     </option>
                   ))}
                 </select>
+                {form.adminId && admins.find(a => a._id === form.adminId)?.address && (
+                  <div className="mt-2 text-sm text-[#686B78] bg-[#F4F4F4] p-3 rounded-xl border border-[#E8E8E8]">
+                    <span className="font-semibold text-[#282C3F]">Organization Address:</span> {admins.find(a => a._id === form.adminId).address}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
