@@ -65,4 +65,20 @@ const sendAgentAssignmentNotification = async ({ agentEmail, agentName, donorNam
   await sendBrevoEmail(agentEmail, subject, html);
 };
 
-module.exports = { sendFoodPostNotification, sendAgentAssignmentNotification };
+const sendPasswordResetEmail = async (email, tempPassword) => {
+  const subject = `🔐 Password Reset Request`;
+  const html = `
+      <div style="font-family: DM Sans, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #FEFAE0; border-radius: 12px;">
+        <h2 style="color: #2D6A4F; font-family: serif;">🔐 Password Reset</h2>
+        <p style="color: #264653;">You requested a password reset for your <strong>FeedForward</strong> account.</p>
+        <div style="background: white; padding: 16px; border-radius: 8px; border-left: 4px solid #FC8019;">
+          <p>Your temporary password is: <strong style="font-size: 18px; color: #FC8019;">${tempPassword}</strong></p>
+        </div>
+        <p style="margin-top: 16px; color: #264653;">Please log in with this temporary password and update it immediately in your Profile settings.</p>
+        <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/login" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #FC8019; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">Go to Login</a>
+      </div>
+  `;
+  await sendBrevoEmail(email, subject, html);
+};
+
+module.exports = { sendFoodPostNotification, sendAgentAssignmentNotification, sendPasswordResetEmail };

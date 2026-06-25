@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 
-const roleColors = { donor: '#1BA672', admin: '#FC8019', agent: '#6C63FF' };
+const roleColors = { donor: '#1BA672', admin: '#FC8019', agent: '#6C63FF', superadmin: '#282C3F' };
 
 export default function DashboardLayout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,7 +30,11 @@ export default function DashboardLayout({ children, title }) {
     { icon: '🚴', label: 'Deliveries', path: '/agent/deliveries' },
     { icon: '👤', label: 'Profile', path: '/agent/profile' },
   ];
-  const bottomNavByRole = { donor: donorBottomNav, admin: adminBottomNav, agent: agentBottomNav };
+  const superadminBottomNav = [
+    { icon: '🏠', label: 'Home', path: '/superadmin' },
+    { icon: '👥', label: 'Create', path: '/superadmin/create' },
+  ];
+  const bottomNavByRole = { donor: donorBottomNav, admin: adminBottomNav, agent: agentBottomNav, superadmin: superadminBottomNav };
   const bottomNav = bottomNavByRole[user?.role] || [];
 
   return (

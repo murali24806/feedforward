@@ -4,9 +4,9 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true, minlength: 6 },
+  password: { type: String, minlength: 6 }, // made not required to support google login without password
   phone: { type: String, trim: true },
-  role: { type: String, enum: ['donor', 'admin', 'agent'], required: true },
+  role: { type: String, enum: ['donor', 'admin', 'agent', 'superadmin'], required: true },
   profilePhoto: { type: String, default: '' },
   address: { type: String, default: '' },
   bio: { type: String, default: '' },

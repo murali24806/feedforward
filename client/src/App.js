@@ -15,6 +15,8 @@ import AdminTracking from './pages/AdminTracking';
 import AdminDeliveries from './pages/AdminDeliveries';
 import AgentDashboard from './pages/AgentDashboard';
 import AgentDeliveries from './pages/AgentDeliveries';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SuperAdminCreateUser from './pages/SuperAdminCreateUser';
 
 // Protected Route
 function Protected({ children, role }) {
@@ -22,7 +24,7 @@ function Protected({ children, role }) {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9]"><div className="text-center"><div className="text-5xl mb-4 animate-bounce">🌱</div><p className="font-display text-xl text-[#282C3F]">Loading FeedForward...</p></div></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (role && user.role !== role) {
-    const roleRoutes = { donor: '/donor', admin: '/admin', agent: '/agent' };
+    const roleRoutes = { donor: '/donor', admin: '/admin', agent: '/agent', superadmin: '/superadmin' };
     return <Navigate to={roleRoutes[user.role] || '/login'} replace />;
   }
   return children;
@@ -57,6 +59,10 @@ export default function App() {
           <Route path="/agent/deliveries" element={<Protected role="agent"><AgentDeliveries /></Protected>} />
           <Route path="/agent/deliveries/:id" element={<Protected role="agent"><AgentDeliveries /></Protected>} />
           <Route path="/agent/profile" element={<Protected role="agent"><ProfilePage /></Protected>} />
+
+          {/* Superadmin */}
+          <Route path="/superadmin" element={<Protected role="superadmin"><SuperAdminDashboard /></Protected>} />
+          <Route path="/superadmin/create" element={<Protected role="superadmin"><SuperAdminCreateUser /></Protected>} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/login" replace />} />

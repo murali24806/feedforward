@@ -23,14 +23,18 @@ API.interceptors.response.use(
 // Auth
 export const register = (data) => API.post('/auth/register', data);
 export const login = (data) => API.post('/auth/login', data);
+export const googleLogin = (data) => API.post('/auth/google', data);
+export const forgotPassword = (data) => API.post('/auth/forgot-password', data);
 
 // Users
 export const getProfile = () => API.get('/users/profile');
 export const updateProfile = (data) => API.put('/users/profile', data);
+export const updatePassword = (data) => API.put('/users/profile/password', data);
 export const getDonors = () => API.get('/users/donors');
 export const getAgents = () => API.get('/users/agents');
 export const getAdmins = () => API.get('/users/admins');
 export const getUserById = (id) => API.get(`/users/${id}`);
+export const deleteUser = (id) => API.delete(`/superadmin/users/${id}`);
 
 // Food
 export const postFood = (data) => API.post('/food/post', data);

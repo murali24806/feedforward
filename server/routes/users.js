@@ -22,6 +22,29 @@ router.put('/profile', protect, upload.single('profilePhoto'), async (req, res) 
   }
 });
 
+// PUT /api/users/profile/password
+router.put('/profile/password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Both current and new passwords are required' });
+    if (newPassword.length < 6) return res.status(400).json({ message: 'New password must be at least 6 characters' });
+
+    const user = await User.findById(req.user._id);
+    
+    // Some users (like Google users) might not have a password set, but usually they do
+    if (user.password) {
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) return res.status(401).json({ message: 'Incorrect current password' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // GET /api/users/donors (admin only)
 router.get('/donors', protect, requireRole('admin'), async (req, res) => {
   try {

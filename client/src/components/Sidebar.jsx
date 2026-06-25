@@ -24,8 +24,13 @@ const agentNav = [
   { icon: '👤', label: 'Profile', path: '/agent/profile' },
 ];
 
-const navByRole = { donor: donorNav, admin: adminNav, agent: agentNav };
-const roleColors = { donor: '#1BA672', admin: '#FC8019', agent: '#6C63FF' };
+const superadminNav = [
+  { icon: '🏠', label: 'Dashboard', path: '/superadmin' },
+  { icon: '👥', label: 'Create User', path: '/superadmin/create' },
+];
+
+const navByRole = { donor: donorNav, admin: adminNav, agent: agentNav, superadmin: superadminNav };
+const roleColors = { donor: '#1BA672', admin: '#FC8019', agent: '#6C63FF', superadmin: '#282C3F' };
 
 export default function Sidebar({ mobileOpen, onClose }) {
   const { user, logoutUser } = useAuth();

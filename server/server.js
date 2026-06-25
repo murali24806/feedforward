@@ -27,6 +27,7 @@ app.use('/api/users',    require('./routes/users'));
 app.use('/api/food',     require('./routes/food'));
 app.use('/api/delivery', require('./routes/delivery'));
 app.use('/api/points',   require('./routes/points'));
+app.use('/api/superadmin', require('./routes/superadmin'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'FeedForward server running OK' }));
 

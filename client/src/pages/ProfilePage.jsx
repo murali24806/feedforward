@@ -3,11 +3,13 @@ import DashboardLayout from '../components/DashboardLayout';
 import ProfileEditor from '../components/ProfileEditor';
 import PointsBadge from '../components/PointsBadge';
 import { useAuth } from '../context/AuthContext';
-import { getMyPoints } from '../services/api';
+import { getMyPoints, updatePassword } from '../services/api';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [pointLogs, setPointLogs] = useState([]);
+  const [passForm, setPassForm] = useState({ currentPassword: '', newPassword: '' });
+  const [passStatus, setPassStatus] = useState({ loading: false, error: '', success: '' });
 
   useEffect(() => {
     if (user?.role === 'donor') {
@@ -19,8 +21,41 @@ export default function ProfilePage() {
     <DashboardLayout title="My Profile">
       <div className="max-w-4xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-5">
             <ProfileEditor />
+
+            {/* Change Password Card */}
+            <div className="card">
+              <h3 className="font-display text-2xl font-bold text-[#282C3F] mb-6">Change Password</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setPassStatus({ loading: true, error: '', success: '' });
+                try {
+                  const res = await updatePassword(passForm);
+                  setPassStatus({ loading: false, error: '', success: res.data.message });
+                  setPassForm({ currentPassword: '', newPassword: '' });
+                  setTimeout(() => setPassStatus(s => ({ ...s, success: '' })), 3000);
+                } catch (err) {
+                  setPassStatus({ loading: false, error: err.response?.data?.message || 'Failed to update password', success: '' });
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">Current or Temporary Password</label>
+                  <input type="password" value={passForm.currentPassword} onChange={e => setPassForm({ ...passForm, currentPassword: e.target.value })} required className="input-field" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">New Password</label>
+                  <input type="password" value={passForm.newPassword} onChange={e => setPassForm({ ...passForm, newPassword: e.target.value })} required minLength={6} className="input-field" placeholder="Min. 6 characters" />
+                </div>
+                
+                {passStatus.error && <div className="text-red-500 text-sm font-medium">⚠️ {passStatus.error}</div>}
+                {passStatus.success && <div className="text-green-600 text-sm font-medium">✅ {passStatus.success}</div>}
+                
+                <button type="submit" disabled={passStatus.loading} className="btn-primary w-full disabled:opacity-60">
+                  {passStatus.loading ? 'Updating...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
           </div>
 
           <div className="space-y-5">
