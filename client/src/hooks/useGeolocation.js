@@ -21,7 +21,7 @@ export const useGeolocation = () => {
         setError(err.message);
         setLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 50000 }
     );
   }, []);
 
@@ -30,7 +30,7 @@ export const useGeolocation = () => {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => callback({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => console.error('Watch error:', err),
-      { enableHighAccuracy: true, maximumAge: 5000 }
+      { enableHighAccuracy: true, timeout: 50000, maximumAge: 5000 }
     );
     return watchId;
   }, []);
