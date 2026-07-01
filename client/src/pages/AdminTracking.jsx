@@ -10,6 +10,18 @@ const isValidLoc = (loc) =>
   !isNaN(Number(loc.lat)) && !isNaN(Number(loc.lng)) &&
   !(Number(loc.lat) === 0 && Number(loc.lng) === 0);
 
+const resolveTargetLoc = (d) => {
+  if (!d) return null;
+  if (d.status === 'picked_up') {
+    if (isValidLoc(d.adminLocation)) return d.adminLocation;
+    if (isValidLoc(d.adminId?.location)) return d.adminId.location;
+    return null;
+  }
+  if (isValidLoc(d.foodPostId?.location)) return d.foodPostId.location;
+  if (isValidLoc(d.donorId?.location)) return d.donorId.location;
+  return null;
+};
+
 export default function AdminTracking() {
   const mapRef          = useRef(null);
   const mapInstanceRef  = useRef(null);
@@ -117,7 +129,10 @@ export default function AdminTracking() {
 
     activeDeliveries.forEach(del => {
       if (!donorMarkersRef.current[del._id]) {
-        const loc = del.foodPostId?.location;
+        let loc = null;
+        if (isValidLoc(del.foodPostId?.location)) loc = del.foodPostId.location;
+        else if (isValidLoc(del.donorId?.location)) loc = del.donorId.location;
+
         if (isValidLoc(loc)) {
           const icon = L.divIcon({
             html: `<div style="
@@ -135,7 +150,10 @@ export default function AdminTracking() {
       }
 
       if (del.status === 'picked_up' && !adminMarkersRef.current[del._id]) {
-        const loc = del.adminLocation;
+        let loc = null;
+        if (isValidLoc(del.adminLocation)) loc = del.adminLocation;
+        else if (isValidLoc(del.adminId?.location)) loc = del.adminId.location;
+
         if (isValidLoc(loc)) {
           const icon = L.divIcon({
             html: `<div style="
@@ -209,10 +227,7 @@ export default function AdminTracking() {
       // Draw straight dashed line agent → destination (refreshes each update)
       if (deliveryId) {
         const d = deliveriesRef.current.find(x => x._id === deliveryId);
-        let targetLoc = d?.foodPostId?.location;
-        if (d?.status === 'picked_up' && isValidLoc(d?.adminLocation)) {
-          targetLoc = d.adminLocation;
-        }
+        let targetLoc = resolveTargetLoc(d);
 
         if (isValidLoc(targetLoc)) {
           if (routeLinesRef.current[deliveryId]) {
@@ -239,10 +254,7 @@ export default function AdminTracking() {
 
     const agentId  = del.agentId?._id || del.agentId;
     const agentLoc = agentLocations[agentId];
-    let targetLoc = del.foodPostId?.location;
-    if (del.status === 'picked_up' && isValidLoc(del.adminLocation)) {
-      targetLoc = del.adminLocation;
-    }
+    let targetLoc = resolveTargetLoc(del);
     const points   = [];
 
     if (agentLoc) points.push([Number(agentLoc.lat), Number(agentLoc.lng)]);
@@ -324,7 +336,7 @@ export default function AdminTracking() {
             {activeDeliveries.map((del, i) => {
               const agentId  = del.agentId?._id || del.agentId;
               const agentLoc = agentLocations[agentId];
-              const donorLoc = del.foodPostId?.location;
+              const donorLoc = resolveTargetLoc(del);
               const isSelected = selectedDelivery?._id === del._id;
 
               return (
@@ -373,7 +385,7 @@ export default function AdminTracking() {
                     <div className="flex items-center gap-2">
                       <span>📍</span>
                       <span className={`text-xs font-medium ${isValidLoc(donorLoc) ? 'text-[#1BA672]' : 'text-amber-500'}`}>
-                        {isValidLoc(donorLoc) ? 'Pickup pinned on map ✓' : 'Pickup location not saved'}
+                        {isValidLoc(donorLoc) ? 'Target pinned on map ✓' : 'Target location not saved'}
                       </span>
                     </div>
                   </div>
