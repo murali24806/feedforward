@@ -5,6 +5,7 @@ const FoodPost = require('../models/FoodPost');
 const User = require('../models/User');
 const { protect, requireRole } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
+const { sendDonationThankYouEmail } = require('../utils/mailer');
 
 // GET /api/delivery/my — agent's deliveries (filtered: exclude removed by agent)
 router.get('/my', protect, requireRole('agent'), async (req, res) => {
@@ -194,6 +195,17 @@ router.put('/:id/complete', protect, requireRole('agent'), (req, res, next) => {
     });
 
     await User.findByIdAndUpdate(req.user._id, { isAvailable: true });
+
+    // Fetch food post and donor to get names and emails for the notification
+    const foodPost = await FoodPost.findById(delivery.foodPostId);
+    const donor = await User.findById(delivery.donorId);
+    if (donor && donor.email && foodPost) {
+      sendDonationThankYouEmail({
+        donorEmail: donor.email,
+        donorName: donor.name,
+        foodName: foodPost.foodName
+      }).catch(err => console.error('Failed to send thank you email:', err));
+    }
 
     req.io.to(`delivery:${delivery._id}`).emit('delivery:statusChanged', {
       deliveryId: delivery._id,

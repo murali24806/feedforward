@@ -81,4 +81,17 @@ const sendPasswordResetEmail = async (email, tempPassword) => {
   await sendBrevoEmail(email, subject, html);
 };
 
-module.exports = { sendFoodPostNotification, sendAgentAssignmentNotification, sendPasswordResetEmail };
+const sendDonationThankYouEmail = async ({ donorEmail, donorName, foodName }) => {
+  const subject = `🎉 Thank You for Your Donation!`;
+  const html = `
+      <div style="font-family: DM Sans, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #FEFAE0; border-radius: 12px;">
+        <h2 style="color: #2D6A4F; font-family: serif;">🎉 Delivery Completed!</h2>
+        <p style="color: #264653;">Hi <strong>${donorName}</strong>, your generous donation of <strong>${foodName}</strong> has been successfully delivered to those in need.</p>
+        <p style="color: #264653;">Thank you for making a difference and helping reduce food waste. Your contribution is highly appreciated!</p>
+        <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/donor" style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: #2D6A4F; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">View Dashboard</a>
+      </div>
+  `;
+  await sendBrevoEmail(donorEmail, subject, html);
+};
+
+module.exports = { sendFoodPostNotification, sendAgentAssignmentNotification, sendPasswordResetEmail, sendDonationThankYouEmail };
