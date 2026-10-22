@@ -48,6 +48,27 @@ app.use('/api/citizen-requests', require('./routes/citizenRequests'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'FeedForward server running OK' }));
 
+app.get('/api/health/test-email', async (req, res) => {
+  const { sendEmail } = require('./utils/mailer');
+  const targetEmail = req.query.to || process.env.EMAIL_USER || 'muralipatnala24@gmail.com';
+  try {
+    const info = await sendEmail(
+      targetEmail,
+      '🧪 FeedForward Mailer Diagnostic Test',
+      `<div style="font-family: sans-serif; padding: 20px; background: #E8F5E9; border-radius: 8px; border-left: 4px solid #2E7D32;">
+        <h2 style="color: #2E7D32; margin-top: 0;">🌱 FeedForward Email System Operational</h2>
+        <p style="color: #1B5E20;">This is a live test email sent from the FeedForward backend to confirm your transactional mailer configuration is functioning properly.</p>
+        <p><strong>Configured EMAIL_USER:</strong> ${process.env.EMAIL_USER}</p>
+        <p><strong>Delivered to:</strong> ${targetEmail}</p>
+        <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+      </div>`
+    );
+    res.json({ success: true, message: `Test email sent successfully to ${targetEmail}`, info });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Load model at top level — avoids MODULE_NOT_FOUND inside callbacks
 const Delivery = require('./models/Delivery');
 

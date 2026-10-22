@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { protect, requireRole } = require('../middleware/auth');
 const admin = require('../firebaseAdmin');
+const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/mailer');
 
 const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
@@ -47,6 +48,14 @@ async function registerUser(req, res, { name, email, password, phone, role, addr
       address, 
       isProfileComplete: false 
     });
+
+    // Send welcome email (Non-blocking background)
+    sendWelcomeEmail({
+      email: user.email,
+      name: user.name,
+      role: user.role
+    }).catch(e => console.error('[Auth] Welcome email error:', e.message));
+
     res.status(201).json({
       token: generateToken(user._id),
       user: {
@@ -188,12 +197,11 @@ router.post('/forgot-password', async (req, res) => {
     await user.save();
 
     // Send email
-    const { sendPasswordResetEmail } = require('../utils/mailer');
     try {
       await sendPasswordResetEmail(email, tempPassword);
     } catch (err) {
-      console.error('Failed to send email. Ensure Brevo API key is valid.');
-      return res.status(500).json({ message: 'Failed to send email. Please contact support.' });
+      console.error('[Auth] Failed to send password reset email:', err.message);
+      return res.status(500).json({ message: 'Failed to send password reset email. Please contact support.' });
     }
 
     res.json({ message: 'If that email exists, we sent a temporary password to it.' });

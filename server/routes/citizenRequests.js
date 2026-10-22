@@ -3,6 +3,7 @@ const router = express.Router();
 const CitizenRequest = require('../models/CitizenRequest');
 const FoodPost = require('../models/FoodPost');
 const { protect, requireRole } = require('../middleware/auth');
+const { sendCitizenRequestNotification } = require('../utils/mailer');
 
 // ── 1. PUBLIC: Submit a Food Assistance Request (No Login Needed) ─────────
 router.post('/', async (req, res) => {
@@ -51,6 +52,19 @@ router.post('/', async (req, res) => {
         time: new Date()
       });
     }
+
+    // ── Email Notification (Background Non-Blocking) ─────────────
+    sendCitizenRequestNotification({
+      name: name.trim(),
+      phone: phone.trim(),
+      mealsNeeded: Number(mealsNeeded) || 1,
+      dietaryType: dietaryType || 'any',
+      needType: needType || 'Individual',
+      notes: notes || '',
+      address: address || city || 'Local GPS location provided',
+      pin,
+      navigationUrl
+    }).catch(emailErr => console.error('[CitizenRequest] Email notification error:', emailErr.message));
 
     res.status(201).json({
       success: true,

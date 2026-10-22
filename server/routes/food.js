@@ -9,7 +9,8 @@ const {
   sendFoodPostNotification,
   sendAgentAssignmentNotification,
   sendFoodPostAlertToSuperAdmin,
-  sendBroadcastFoodPostNotification
+  sendBroadcastFoodPostNotification,
+  sendDonorPostConfirmationEmail
 } = require('../utils/mailer');
 
 // POST /api/food/post — donor posts food
@@ -83,7 +84,19 @@ router.post('/post', protect, requireRole('donor'), upload.single('photo'), asyn
     // ── Email Notifications (Background Non-Blocking) ─────────────
     (async () => {
       try {
-        // Always notify Super Admin(s)
+        // 1. Send confirmation receipt to the donor
+        if (req.user && req.user.email) {
+          sendDonorPostConfirmationEmail({
+            donorEmail: req.user.email,
+            donorName: req.user.name,
+            foodName,
+            quantity,
+            address,
+            expiryTime
+          }).catch(e => console.log('Donor confirmation email error:', e.message));
+        }
+
+        // 2. Always notify Super Admin(s)
         const superAdmins = await User.find({ role: 'superadmin' });
         for (const sa of superAdmins) {
           sendFoodPostAlertToSuperAdmin({
@@ -96,7 +109,7 @@ router.post('/post', protect, requireRole('donor'), upload.single('photo'), asyn
           }).catch(e => console.log('Superadmin email error:', e.message));
         }
 
-        // Notify NGO(s)
+        // 3. Notify NGO(s)
         if (isBroadcast) {
           const allNgos = await User.find({ role: 'admin' });
           for (const ngo of allNgos) {
