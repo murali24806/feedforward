@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import DashboardLayout from '../components/DashboardLayout';
 import LiveMap from '../components/LiveMap';
-import { getMyDeliveries, updateDeliveryStatus, rejectDelivery, removeDelivery, completeDelivery } from '../services/api';
+import { getMyDeliveries, getDeliveryById, updateDeliveryStatus, rejectDelivery, removeDelivery, completeDelivery } from '../services/api';
 import { getSocket } from '../services/socket';
 
 const STEPS = [
@@ -59,16 +59,31 @@ export default function AgentDeliveries() {
     const load = async () => {
       try {
         const res = await getMyDeliveries();
-        setDeliveries(res.data);
+        const list = Array.isArray(res.data) ? res.data : [];
+        setDeliveries(list);
         if (id) {
-          const found = res.data.find(d => d._id === id);
-          if (found) setSelected(found);
+          let found = list.find(d => d._id === id);
+          if (!found) {
+            try {
+              const single = await getDeliveryById(id);
+              if (single?.data) {
+                found = single.data;
+                setDeliveries(prev => [single.data, ...prev.filter(d => d._id !== single.data._id)]);
+              }
+            } catch (err) {
+              console.warn('Could not fetch single delivery by ID:', err);
+            }
+          }
+          setSelected(found || list[0] || null);
         } else {
-          const active = res.data.find(d => !['delivered','rejected_by_agent'].includes(d.status));
-          setSelected(active || res.data[0] || null);
+          const active = list.find(d => !['delivered','rejected_by_agent'].includes(d.status));
+          setSelected(active || list[0] || null);
         }
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) {
+        console.error('Error loading deliveries:', e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [id]);
@@ -303,9 +318,9 @@ export default function AgentDeliveries() {
                     <p className="text-sm text-[#93959F] mt-1">
                       📍 {selected.donorId?.address || selected.foodPostId?.location?.address || 'Location on map below'}
                     </p>
-                    {targetLoc && selected.status !== 'picked_up' && (
-                      <p className="text-xs text-[#D0D0D0] mt-0.5">
-                        Coords: {Number(targetLoc.lat).toFixed(5)}, {Number(targetLoc.lng).toFixed(5)}
+                    {donorLoc && selected.status !== 'picked_up' && (
+                      <p className="text-xs text-[#93959F] mt-0.5">
+                        Coords: {Number(donorLoc.lat).toFixed(5)}, {Number(donorLoc.lng).toFixed(5)}
                       </p>
                     )}
                   </div>
