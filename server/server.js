@@ -9,18 +9,34 @@ dotenv.config();
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, {
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow all requests from any Vercel domain, localhost, or configured CLIENT_URL
+    callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
+
+const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: (origin, callback) => callback(null, true),
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   },
 });
 
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => { req.io = io; next(); });
+
+app.get('/', (req, res) => res.json({ 
+  status: 'FeedForward server running OK', 
+  message: 'FeedForward Backend API is active and ready',
+  health: '/api/health' 
+}));
 
 app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/users',    require('./routes/users'));
