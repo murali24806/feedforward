@@ -1703,12 +1703,20 @@
 
       .nav-actions {
         display: flex;
-        gap: 8px;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .nav-btn-request {
+        padding: 6px 10px;
+        font-size: 11px;
+        border-radius: 8px;
       }
 
       .nav-btn-donate {
-        padding: 7px 13px;
-        font-size: 12px;
+        padding: 6px 12px;
+        font-size: 11px;
+        border-radius: 8px;
       }
 
       .hamburger {
@@ -1724,6 +1732,30 @@
     }
 
     @media(max-width: 480px) {
+      .nav-actions {
+        gap: 4px;
+      }
+
+      .nav-btn-request {
+        padding: 5px 8px;
+        font-size: 10px;
+      }
+
+      .nav-btn-donate {
+        padding: 5px 9px;
+        font-size: 10px;
+      }
+
+      .nav-logo-text {
+        font-size: 16px;
+      }
+
+      .nav-logo-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 15px;
+      }
+
       .mh-btn-row {
         flex-direction: column;
       }

@@ -994,74 +994,172 @@ export default function SuperAdminDashboard() {
                 <span className="text-4xl block mb-2">🍽️</span>
                 <p className="font-semibold text-gray-600">No citizen food requests logged yet.</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Public requests submitted from the home page will appear here instantly via WebSockets.
+                  Public requests submitted from the home page will appear here instantly via WebSockets with live GPS coordinates.
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                      <th className="py-4 px-4">Requester</th>
-                      <th className="py-4 px-4">Meals & Type</th>
-                      <th className="py-4 px-4">Location / Area</th>
-                      <th className="py-4 px-4">Pickup PIN</th>
-                      <th className="py-4 px-4">Status</th>
-                      <th className="py-4 px-4">Submitted</th>
-                      <th className="py-4 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
-                    {citizenRequests.map((req) => (
-                      <tr key={req._id} className="hover:bg-gray-50/70 transition-colors">
-                        <td className="py-4 px-4">
-                          <div className="font-bold text-gray-900">{req.name}</div>
+              <div>
+                {/* ── DESKTOP TABLE VIEW (hidden on mobile, visible on md+) ── */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="py-4 px-4">Requester</th>
+                        <th className="py-4 px-4">Meals & Type</th>
+                        <th className="py-4 px-4">Live Doorstep GPS</th>
+                        <th className="py-4 px-4">Pickup PIN</th>
+                        <th className="py-4 px-4">Status</th>
+                        <th className="py-4 px-4">Submitted</th>
+                        <th className="py-4 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-sm">
+                      {citizenRequests.map((req) => (
+                        <tr key={req._id} className="hover:bg-gray-50/70 transition-colors">
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-gray-900">{req.name}</div>
+                            <a
+                              href={`tel:${req.phone}`}
+                              className="text-xs text-emerald-600 hover:underline flex items-center gap-1 mt-0.5"
+                            >
+                              📞 {req.phone}
+                            </a>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div className="font-semibold text-gray-800">
+                              {req.mealsNeeded} Meal(s)
+                            </div>
+                            <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-bold mt-1 ${
+                              req.dietaryType === 'veg' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {req.dietaryType === 'veg' ? '🌱 Veg Only' : '🍖 Any Food'}
+                            </span>
+                            <span className="block text-[11px] text-gray-400 mt-0.5">
+                              {req.needType}
+                            </span>
+                          </td>
+
+                          <td className="py-4 px-4 max-w-xs">
+                            <div className="text-xs text-gray-800 font-medium truncate" title={req.location?.address}>
+                              📍 {req.location?.address || 'Location provided'}
+                            </div>
+                            {req.location?.city && (
+                              <span className="text-[11px] text-gray-500">
+                                City: {req.location.city}
+                              </span>
+                            )}
+                            {/* Live Doorstep Navigation Button */}
+                            {req.location?.lat && req.location?.lng ? (
+                              <div className="mt-1 flex items-center gap-2">
+                                <a
+                                  href={req.location.navigationUrl || `https://www.google.com/maps/dir/?api=1&destination=${req.location.lat},${req.location.lng}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition-all border border-blue-200 shadow-xs"
+                                  title="Open Voice Turn-by-Turn GPS Navigation"
+                                >
+                                  <span>🚗 Live Navigation</span>
+                                  <span className="text-[10px]">↗</span>
+                                </a>
+                                {req.location.accuracy && (
+                                  <span className="text-[10px] text-emerald-600 font-medium">
+                                    ±{req.location.accuracy}m
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-gray-400 block mt-0.5">Approximate street</span>
+                            )}
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <span className="font-mono font-bold text-sm bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-xl border border-emerald-200">
+                              {req.pin}
+                            </span>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                              req.status === 'approved'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : req.status === 'fulfilled'
+                                ? 'bg-blue-100 text-blue-800'
+                                : req.status === 'rejected'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              ● {req.status}
+                            </span>
+                          </td>
+
+                          <td className="py-4 px-4 text-xs text-gray-400">
+                            {new Date(req.createdAt).toLocaleDateString()}
+                            <div className="text-[10px]">
+                              {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {req.status === 'pending' && (
+                                <button
+                                  onClick={() => handleUpdateCitizenStatus(req._id, 'approved')}
+                                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+                                  title="Approve Request & Allow Pickup with PIN"
+                                >
+                                  ✅ Approve
+                                </button>
+                              )}
+                              {req.status === 'approved' && (
+                                <button
+                                  onClick={() => handleUpdateCitizenStatus(req._id, 'fulfilled')}
+                                  className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+                                  title="Mark Food as Picked Up / Delivered"
+                                >
+                                  🎉 Mark Fulfilled
+                                </button>
+                              )}
+                              {req.status === 'pending' && (
+                                <button
+                                  onClick={() => handleUpdateCitizenStatus(req._id, 'rejected')}
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                  title="Reject Request"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteCitizenReq(req._id)}
+                                className="px-2 py-1.5 text-gray-400 hover:text-rose-600 hover:bg-gray-100 rounded-lg text-xs transition-all cursor-pointer"
+                                title="Delete permanently"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── MOBILE CARD VIEW (visible on mobile, hidden on md+) ── */}
+                <div className="block md:hidden divide-y divide-gray-100">
+                  {citizenRequests.map((req) => (
+                    <div key={req._id} className="p-4 space-y-3 bg-white">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-gray-900 text-base">{req.name}</h4>
                           <a
                             href={`tel:${req.phone}`}
-                            className="text-xs text-emerald-600 hover:underline flex items-center gap-1 mt-0.5"
+                            className="text-xs text-emerald-600 font-semibold flex items-center gap-1 mt-0.5"
                           >
-                            📞 {req.phone}
+                            📞 {req.phone} (Tap to Call)
                           </a>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <div className="font-semibold text-gray-800">
-                            {req.mealsNeeded} Meal(s)
-                          </div>
-                          <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-bold mt-1 ${
-                            req.dietaryType === 'veg' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {req.dietaryType === 'veg' ? '🌱 Veg Only' : '🍖 Any Food'}
-                          </span>
-                          <span className="block text-[11px] text-gray-400 mt-0.5">
-                            Category: {req.needType}
-                          </span>
-                        </td>
-
-                        <td className="py-4 px-4 max-w-xs">
-                          <div className="text-xs text-gray-700 truncate" title={req.location?.address}>
-                            📍 {req.location?.address || 'Address provided'}
-                          </div>
-                          {req.location?.city && (
-                            <span className="text-[11px] text-gray-500 font-medium">
-                              City: {req.location.city}
-                            </span>
-                          )}
-                          {req.notes && (
-                            <div className="text-[11px] text-gray-400 italic mt-1 bg-gray-50 p-1.5 rounded">
-                              "{req.notes}"
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <span className="font-mono font-bold text-sm bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-xl border border-emerald-200">
-                            {req.pin}
-                          </span>
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                        </div>
+                        <div className="text-right">
+                          <span className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                             req.status === 'approved'
                               ? 'bg-emerald-100 text-emerald-800'
                               : req.status === 'fulfilled'
@@ -1072,57 +1170,78 @@ export default function SuperAdminDashboard() {
                           }`}>
                             ● {req.status}
                           </span>
-                        </td>
-
-                        <td className="py-4 px-4 text-xs text-gray-400">
-                          {new Date(req.createdAt).toLocaleDateString()}
-                          <div className="text-[10px]">
-                            {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <div className="text-[10px] font-mono text-gray-400 mt-1">
+                            PIN: <strong className="text-emerald-700">{req.pin}</strong>
                           </div>
-                        </td>
+                        </div>
+                      </div>
 
-                        <td className="py-4 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {req.status === 'pending' && (
-                              <button
-                                onClick={() => handleUpdateCitizenStatus(req._id, 'approved')}
-                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
-                                title="Approve Request & Allow Pickup with PIN"
-                              >
-                                ✅ Approve
-                              </button>
-                            )}
-                            {req.status === 'approved' && (
-                              <button
-                                onClick={() => handleUpdateCitizenStatus(req._id, 'fulfilled')}
-                                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
-                                title="Mark Food as Picked Up / Delivered"
-                              >
-                                🎉 Mark Fulfilled
-                              </button>
-                            )}
-                            {req.status === 'pending' && (
-                              <button
-                                onClick={() => handleUpdateCitizenStatus(req._id, 'rejected')}
-                                className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition-all"
-                                title="Reject Request"
-                              >
-                                ✕
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteCitizenReq(req._id)}
-                              className="px-2 py-1.5 text-gray-400 hover:text-rose-600 hover:bg-gray-100 rounded-lg text-xs transition-all"
-                              title="Delete permanently"
+                      <div className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl">
+                        <span>🍱</span>
+                        <span>
+                          <strong>{req.mealsNeeded} Meal(s)</strong> ·{' '}
+                          {req.dietaryType === 'veg' ? '🌱 Vegetarian' : '🍖 Any Food'} ·{' '}
+                          {req.needType}
+                        </span>
+                      </div>
+
+                      {/* Location with Live Navigation */}
+                      <div className="text-xs space-y-1">
+                        <div className="text-gray-800 font-medium">
+                          📍 {req.location?.address || 'Location provided'}
+                        </div>
+                        {req.location?.lat && req.location?.lng && (
+                          <div className="pt-1">
+                            <a
+                              href={req.location.navigationUrl || `https://www.google.com/maps/dir/?api=1&destination=${req.location.lat},${req.location.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold w-full justify-center shadow-sm"
                             >
-                              🗑️
-                            </button>
+                              <span>🚗</span>
+                              <span>Open Live GPS Navigation ↗</span>
+                            </a>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        )}
+                      </div>
+
+                      {/* Mobile Action Buttons */}
+                      <div className="flex items-center gap-2 pt-1">
+                        {req.status === 'pending' && (
+                          <button
+                            onClick={() => handleUpdateCitizenStatus(req._id, 'approved')}
+                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                          >
+                            ✅ Approve
+                          </button>
+                        )}
+                        {req.status === 'approved' && (
+                          <button
+                            onClick={() => handleUpdateCitizenStatus(req._id, 'fulfilled')}
+                            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                          >
+                            🎉 Mark Fulfilled
+                          </button>
+                        )}
+                        {req.status === 'pending' && (
+                          <button
+                            onClick={() => handleUpdateCitizenStatus(req._id, 'rejected')}
+                            className="px-3 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold"
+                          >
+                            ✕ Reject
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteCitizenReq(req._id)}
+                          className="px-3 py-2 text-gray-400 hover:text-rose-600 hover:bg-gray-100 rounded-xl text-xs"
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

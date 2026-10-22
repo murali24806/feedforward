@@ -16,6 +16,11 @@ router.post('/', async (req, res) => {
     // Generate unique 4-digit pickup / verification PIN
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
 
+    const parsedLat = lat != null && !isNaN(parseFloat(lat)) ? parseFloat(lat) : null;
+    const parsedLng = lng != null && !isNaN(parseFloat(lng)) ? parseFloat(lng) : null;
+    const parsedAccuracy = req.body.accuracy != null && !isNaN(parseFloat(req.body.accuracy)) ? parseFloat(req.body.accuracy) : null;
+    const navigationUrl = parsedLat && parsedLng ? `https://www.google.com/maps/dir/?api=1&destination=${parsedLat},${parsedLng}` : '';
+
     const newRequest = await CitizenRequest.create({
       name: name.trim(),
       phone: phone.trim(),
@@ -24,10 +29,12 @@ router.post('/', async (req, res) => {
       needType: needType || 'Individual',
       notes: notes || '',
       location: {
-        lat: lat ? parseFloat(lat) : null,
-        lng: lng ? parseFloat(lng) : null,
+        lat: parsedLat,
+        lng: parsedLng,
+        accuracy: parsedAccuracy,
         address: address || '',
-        city: city || ''
+        city: city || '',
+        navigationUrl
       },
       pin,
       status: 'pending'

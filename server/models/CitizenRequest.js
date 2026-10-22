@@ -10,8 +10,10 @@ const citizenRequestSchema = new mongoose.Schema({
   location: {
     lat: { type: Number, default: null },
     lng: { type: Number, default: null },
+    accuracy: { type: Number, default: null }, // GPS accuracy radius in meters
     address: { type: String, default: '' },
-    city: { type: String, default: '' }
+    city: { type: String, default: '' },
+    navigationUrl: { type: String, default: '' } // Live GPS navigation direct link
   },
   pin: { type: String, required: true }, // 4-digit pickup / verification code
   status: {
