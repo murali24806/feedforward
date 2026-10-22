@@ -5,7 +5,18 @@ import { useAuth } from '../context/AuthContext';
 
 export default function ProfileEditor() {
   const { user, updateUser } = useAuth();
-  const [form, setForm] = useState({ name: user?.name || '', phone: user?.phone || '', address: user?.address || '', bio: user?.bio || '', vehicleType: user?.vehicleType || '', isAvailable: user?.isAvailable ?? true });
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    address: user?.address || '',
+    city: user?.city || '',
+    pincode: user?.pincode || '',
+    bio: user?.bio || '',
+    donorType: user?.donorType || '',
+    organizationName: user?.organizationName || '',
+    vehicleType: user?.vehicleType || '',
+    isAvailable: user?.isAvailable ?? true
+  });
   const [preview, setPreview] = useState(user?.profilePhoto || '');
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -61,7 +72,7 @@ export default function ProfileEditor() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">{user?.role === 'admin' ? 'Organization Name' : 'Full Name'}</label>
+            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">{user?.role === 'admin' ? 'Contact Representative' : 'Full Name'}</label>
             <input name="name" value={form.name} onChange={handle} className="input-field" required />
           </div>
           <div>
@@ -70,9 +81,41 @@ export default function ProfileEditor() {
           </div>
         </div>
 
+        {user?.role === 'admin' && (
+          <div>
+            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">Organization / NGO Name</label>
+            <input name="organizationName" value={form.organizationName} onChange={handle} className="input-field" />
+          </div>
+        )}
+
+        {user?.role === 'donor' && (
+          <div>
+            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">Donor Category</label>
+            <select name="donorType" value={form.donorType} onChange={handle} className="input-field">
+              <option value="">Select Category</option>
+              <option value="Individual">Individual / Home</option>
+              <option value="Restaurant">Restaurant / Cafe</option>
+              <option value="Caterer">Caterer / Banquet</option>
+              <option value="Bakery">Bakery / Grocery</option>
+              <option value="Corporate">Corporate Cafeteria</option>
+            </select>
+          </div>
+        )}
+
         <div>
-          <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">Address</label>
+          <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">Street Address</label>
           <input name="address" value={form.address} onChange={handle} className="input-field" placeholder="Your address" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">City / Locality</label>
+            <input name="city" value={form.city} onChange={handle} className="input-field" placeholder="City" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-[#282C3F] mb-1.5">Pincode</label>
+            <input name="pincode" value={form.pincode} onChange={handle} className="input-field" placeholder="Pincode" />
+          </div>
         </div>
 
         <div>

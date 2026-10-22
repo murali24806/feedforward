@@ -59,6 +59,10 @@ io.on('connection', (socket) => {
     io.to('admin:room').emit('agent:locationUpdate', {
       agentId, lat: numLat, lng: numLng, deliveryId,
     });
+    // Broadcast to superadmin room for global fleet radar
+    io.to('superadmin:room').emit('agent:locationUpdate', {
+      agentId, lat: numLat, lng: numLng, deliveryId,
+    });
 
     // Persist to DB (non-blocking)
     if (deliveryId) {
@@ -68,15 +72,28 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ── Donor / agent joins a delivery-specific room ──────────────────────────
-  socket.on('joinDelivery', (deliveryId) => {
+  // ── Donor / agent / admin joins a delivery-specific room ──────────────────
+  const joinDelRoom = (deliveryId) => {
     if (deliveryId) socket.join('delivery:' + deliveryId);
-  });
+  };
+  const leaveDelRoom = (deliveryId) => {
+    if (deliveryId) socket.leave('delivery:' + deliveryId);
+  };
+  socket.on('joinDelivery', joinDelRoom);
+  socket.on('join:delivery', joinDelRoom);
+  socket.on('leaveDelivery', leaveDelRoom);
+  socket.on('leave:delivery', leaveDelRoom);
 
   // ── Admin joins overview room ─────────────────────────────────────────────
   socket.on('joinAdminRoom', () => {
     socket.join('admin:room');
     // Send current active agents to the newly joined admin immediately
+    socket.emit('admin:activeAgents', activeAgents);
+  });
+
+  // ── SuperAdmin joins global command room ──────────────────────────────────
+  socket.on('joinSuperAdminRoom', () => {
+    socket.join('superadmin:room');
     socket.emit('admin:activeAgents', activeAgents);
   });
 
@@ -86,6 +103,7 @@ io.on('connection', (socket) => {
       io.to('delivery:' + data.deliveryId).emit('delivery:statusChanged', data);
     }
     io.to('admin:room').emit('delivery:statusChanged', data);
+    io.to('superadmin:room').emit('delivery:statusChanged', data);
   });
 
   socket.on('disconnect', () => {
@@ -98,16 +116,18 @@ io.on('connection', (socket) => {
   });
 });
 
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`FeedForward server on port ${PORT}`);
+});
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
-    server.listen(process.env.PORT || 5000, () => {
-      console.log('FeedForward server on port ' + (process.env.PORT || 5000));
-    });
   })
   .catch((err) => {
     console.error('MongoDB error: ' + err.message);
-    process.exit(1);
+    console.warn('⚠️ Warning: MongoDB failed to connect. Check credentials in server/.env');
   });
 
 module.exports = { io };

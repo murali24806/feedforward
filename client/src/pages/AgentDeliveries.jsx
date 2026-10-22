@@ -201,7 +201,9 @@ export default function AgentDeliveries() {
   const resolveTargetLoc = (sel) => {
     if (!sel) return null;
     if (sel.status === 'picked_up') {
-      return sel.adminLocation && isValidLoc(sel.adminLocation) ? sel.adminLocation : null;
+      if (isValidLoc(sel.adminLocation)) return sel.adminLocation;
+      if (isValidLoc(sel.adminId?.location)) return sel.adminId.location;
+      return null;
     }
     const candidates = [sel?.foodPostId?.location, sel?.donorId?.location];
     for (const c of candidates) { if (isValidLoc(c)) return c; }

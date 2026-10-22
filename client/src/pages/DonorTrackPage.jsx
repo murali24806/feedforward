@@ -144,7 +144,9 @@ export default function DonorTrackPage() {
   // Resolve target location based on status
   const resolveTargetLoc = (post, del) => {
     if (post?.status === 'picked_up') {
-      return del?.adminLocation && isValidLocation(del.adminLocation) ? del.adminLocation : null;
+      if (isValidLocation(del?.adminLocation)) return del.adminLocation;
+      if (isValidLocation(del?.adminId?.location)) return del.adminId.location;
+      return null;
     }
     return isValidLocation(post?.location) ? post.location : null;
   };
@@ -225,14 +227,45 @@ export default function DonorTrackPage() {
                     <img src={selected.photo} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-display text-xl font-bold text-[#282C3F]">{selected.foodName}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display text-xl font-bold text-[#282C3F]">{selected.foodName}</h3>
+                      {selected.isBroadcast ? (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-purple-100 text-purple-700">
+                          🌐 Open Broadcast
+                        </span>
+                      ) : (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">
+                          🏢 Direct NGO
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-[#686B78] mt-1">
                       {selected.quantity} · {selected.type === 'veg' ? '🥦 Veg' : '🍗 Non-veg'}
                     </p>
+                    
+                    {/* Organization details */}
+                    <div className="mt-2 text-xs">
+                      {selected.isBroadcast ? (
+                        selected.status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 font-medium">
+                            📢 Broadcasted to all local NGOs — Awaiting first NGO claim
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
+                            🏢 Accepted & Handled by: {selected.claimedByAdmin?.organizationName || selected.claimedByAdmin?.name || selected.adminId?.organizationName || selected.adminId?.name || 'NGO Partner'}
+                          </span>
+                        )
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 text-gray-700 border border-gray-200 font-medium">
+                          🏢 Assigned to: {selected.adminId?.organizationName || selected.adminId?.name || 'Assigned NGO'}
+                        </span>
+                      )}
+                    </div>
+
                     {selected.description && (
-                      <p className="text-sm text-[#93959F] mt-1">{selected.description}</p>
+                      <p className="text-sm text-[#93959F] mt-2">{selected.description}</p>
                     )}
-                    <p className="text-xs text-[#D0D0D0] mt-2">
+                    <p className="text-xs text-[#93959F] mt-2">
                       Posted {new Date(selected.createdAt).toLocaleString()}
                     </p>
                   </div>

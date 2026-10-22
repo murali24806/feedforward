@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { disconnectSocket } from '../services/socket';
+import { getProfile } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -13,7 +14,22 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('ff_user');
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+      } catch (e) {
+        console.error('Failed to parse stored user:', e);
+      }
+
+      // Sync fresh profile in background
+      getProfile()
+        .then((res) => {
+          if (res?.data) {
+            setUser(res.data);
+            localStorage.setItem('ff_user', JSON.stringify(res.data));
+          }
+        })
+        .catch(() => {});
     }
     setLoading(false);
   }, []);

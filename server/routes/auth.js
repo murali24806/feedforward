@@ -38,7 +38,15 @@ async function registerUser(req, res, { name, email, password, phone, role, addr
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ message: 'Email already registered' });
 
-    const user = await User.create({ name, email, password, phone, role, address });
+    const user = await User.create({ 
+      name, 
+      email, 
+      password, 
+      phone, 
+      role, 
+      address, 
+      isProfileComplete: false 
+    });
     res.status(201).json({
       token: generateToken(user._id),
       user: {
@@ -47,12 +55,17 @@ async function registerUser(req, res, { name, email, password, phone, role, addr
         email: user.email,
         phone: user.phone || '',
         role: user.role,
-        profilePhoto: user.profilePhoto,
+        profilePhoto: user.profilePhoto || '',
         points: user.points,
         address: user.address || '',
+        city: user.city || '',
+        pincode: user.pincode || '',
         bio: user.bio || '',
+        organizationName: user.organizationName || '',
+        donorType: user.donorType || '',
         vehicleType: user.vehicleType || '',
         isAvailable: user.isAvailable,
+        isProfileComplete: false,
       }
     });
   } catch (err) {
@@ -81,12 +94,17 @@ router.post('/login', async (req, res) => {
         email: user.email,
         phone: user.phone || '',
         role: user.role,
-        profilePhoto: user.profilePhoto,
+        profilePhoto: user.profilePhoto || '',
         points: user.points,
         isAvailable: user.isAvailable,
         address: user.address || '',
+        city: user.city || '',
+        pincode: user.pincode || '',
         bio: user.bio || '',
+        organizationName: user.organizationName || '',
+        donorType: user.donorType || '',
         vehicleType: user.vehicleType || '',
+        isProfileComplete: user.role === 'superadmin' ? true : !!user.isProfileComplete,
       }
     });
   } catch (err) {
@@ -118,6 +136,7 @@ router.post('/google', async (req, res) => {
         name: name || 'Donor',
         email,
         role: 'donor',
+        isProfileComplete: false,
       });
     }
 
@@ -133,10 +152,15 @@ router.post('/google', async (req, res) => {
         email: user.email,
         phone: user.phone || '',
         role: user.role,
-        profilePhoto: user.profilePhoto,
+        profilePhoto: user.profilePhoto || '',
         points: user.points,
         address: user.address || '',
+        city: user.city || '',
+        pincode: user.pincode || '',
         bio: user.bio || '',
+        organizationName: user.organizationName || '',
+        donorType: user.donorType || '',
+        isProfileComplete: !!user.isProfileComplete,
       }
     });
   } catch (err) {

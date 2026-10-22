@@ -14,7 +14,8 @@ API.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem('ff_token');
       localStorage.removeItem('ff_user');
-      window.location.href = '/login';
+      const isStaffRoute = window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/agent');
+      window.location.href = isStaffRoute ? '/admin/login' : '/login';
     }
     return Promise.reject(err);
   }
@@ -29,6 +30,7 @@ export const forgotPassword = (data) => API.post('/auth/forgot-password', data);
 // Users
 export const getProfile = () => API.get('/users/profile');
 export const updateProfile = (data) => API.put('/users/profile', data);
+export const completeProfile = (data) => API.put('/users/complete-profile', data);
 export const updatePassword = (data) => API.put('/users/profile/password', data);
 export const getDonors = () => API.get('/users/donors');
 export const getAgents = () => API.get('/users/agents');
@@ -58,5 +60,15 @@ export const getDonorDeliveries = () => API.get('/delivery/donor/my');
 export const assignPoints = (data) => API.post('/points/assign', data);
 export const getMyPoints = () => API.get('/points/my');
 export const getDonorPoints = (donorId) => API.get(`/points/${donorId}`);
+
+// SuperAdmin Command Center
+export const getSuperAdminStats = () => API.get('/superadmin/stats');
+export const getSuperAdminUsers = (role) => API.get('/superadmin/users' + (role ? `?role=${role}` : ''));
+export const updateSuperAdminUser = (id, data) => API.put(`/superadmin/users/${id}`, data);
+export const getSuperAdminFoodPosts = () => API.get('/superadmin/food-posts');
+export const updateSuperAdminFoodStatus = (id, data) => API.put(`/superadmin/food-posts/${id}/status`, data);
+export const deleteSuperAdminFoodPost = (id) => API.delete(`/superadmin/food-posts/${id}`);
+export const getSuperAdminDeliveries = () => API.get('/superadmin/deliveries');
+export const getSuperAdminActivityLogs = () => API.get('/superadmin/activity-logs');
 
 export default API;

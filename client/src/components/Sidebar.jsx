@@ -25,19 +25,28 @@ const agentNav = [
 ];
 
 const superadminNav = [
-  { icon: '🏠', label: 'Dashboard', path: '/superadmin' },
-  { icon: '👥', label: 'Create User', path: '/superadmin/create' },
+  { icon: '👑', label: 'Overview & Radar', path: '/admin/superadmin?tab=overview' },
+  { icon: '🍱', label: 'All Food Posts', path: '/admin/superadmin?tab=food' },
+  { icon: '👥', label: 'User Governance', path: '/admin/superadmin?tab=users' },
+  { icon: '🚴', label: 'Fleet Deliveries', path: '/admin/superadmin?tab=deliveries' },
+  { icon: '⚡', label: 'Audit Stream', path: '/admin/superadmin?tab=audit' },
+  { icon: '➕', label: 'Create Account', path: '/admin/superadmin/create' },
 ];
 
 const navByRole = { donor: donorNav, admin: adminNav, agent: agentNav, superadmin: superadminNav };
-const roleColors = { donor: '#1BA672', admin: '#FC8019', agent: '#6C63FF', superadmin: '#282C3F' };
+const roleColors = { 
+  donor: '#34C759', 
+  admin: '#FF9500', 
+  agent: '#007AFF', 
+  superadmin: '#5856D6' 
+};
 
 export default function Sidebar({ mobileOpen, onClose }) {
   const { user, logoutUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const navItems = navByRole[user?.role] || [];
-  const accentColor = roleColors[user?.role] || '#FC8019';
+  const accentColor = roleColors[user?.role] || '#FF9500';
 
   const go = (path) => { navigate(path); onClose?.(); };
 
@@ -45,75 +54,109 @@ export default function Sidebar({ mobileOpen, onClose }) {
     <>
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="lg:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-sm" onClick={onClose} />
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="lg:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-md" 
+            onClick={onClose} 
+          />
         )}
       </AnimatePresence>
 
-      <aside className={`sidebar transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-        {/* Logo */}
-        <div className="p-6 pb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0" style={{ backgroundColor: accentColor }}>
+      <aside className={`sidebar transition-transform duration-300 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        {/* Brand Header */}
+        <div className="p-6 pb-4">
+          <div className="flex items-center gap-3.5">
+            <div 
+              className="w-11 h-11 rounded-[16px] flex items-center justify-center shadow-lg flex-shrink-0" 
+              style={{ backgroundColor: accentColor }}
+            >
               <span className="text-2xl">🌱</span>
             </div>
             <div>
-              <div className="font-display font-bold text-xl text-white">FeedForward</div>
-              <div className="text-xs text-white/40 capitalize font-medium mt-0.5">{user?.role} Panel</div>
+              <div className="font-display font-bold text-xl text-white tracking-tight">FeedForward</div>
+              <div className="text-[12px] text-white/50 capitalize font-medium tracking-wide">
+                {user?.role} Portal
+              </div>
             </div>
           </div>
         </div>
 
-        {/* User card */}
-        <div className="mx-4 mb-5 p-4 bg-white/8 rounded-2xl border border-white/10">
+        {/* User Card (Apple Cupertino Inset Grouped Card) */}
+        <div className="mx-4 mb-5 p-3.5 bg-white/[0.08] backdrop-blur-xl rounded-[18px] border border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
-              style={{ backgroundColor: accentColor }}>
-              {user?.profilePhoto
-                ? <img src={user.profilePhoto} alt="" className="w-full h-full object-cover" />
-                : <span className="text-white font-bold text-lg">{user?.name?.[0]?.toUpperCase()}</span>}
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm"
+              style={{ backgroundColor: accentColor }}
+            >
+              {user?.profilePhoto ? (
+                <img src={user.profilePhoto} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-base">{user?.name?.[0]?.toUpperCase()}</span>
+              )}
             </div>
             <div className="min-w-0">
-              <div className="text-white font-semibold text-base truncate">{user?.name}</div>
-              <div className="text-white/40 text-xs truncate mt-0.5">{user?.email}</div>
+              <div className="text-white font-semibold text-sm truncate tracking-tight">{user?.name}</div>
+              <div className="text-white/45 text-xs truncate mt-0.5">{user?.email}</div>
             </div>
           </div>
           {user?.role === 'donor' && (
-            <div className="mt-3 flex items-center gap-2 bg-[#FC8019]/20 rounded-xl px-3 py-2">
-              <span className="text-base">⭐</span>
-              <span className="text-[#FC8019] font-bold text-sm">{user?.points || 0} reward points</span>
+            <div className="mt-3 flex items-center justify-between bg-[#FF9500]/20 border border-[#FF9500]/30 rounded-[12px] px-3 py-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm">⭐</span>
+                <span className="text-[#FF9500] font-bold text-xs tracking-tight">Impact Points</span>
+              </div>
+              <span className="text-white font-bold text-xs">{user?.points || 0} pts</span>
             </div>
           )}
         </div>
 
-        {/* Nav divider label */}
+        {/* Section Divider */}
         <div className="px-6 mb-2">
-          <span className="text-xs text-white/30 font-semibold uppercase tracking-widest">Navigation</span>
+          <span className="text-[11px] text-white/40 font-semibold uppercase tracking-wider">Navigation</span>
         </div>
 
-        {/* Nav items */}
+        {/* Nav Items */}
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const currentFull = location.pathname + location.search;
+            const isActive = currentFull === item.path ||
+              (location.pathname === item.path && !location.search && item.path.includes('overview'));
+
             return (
-              <button key={item.path} onClick={() => go(item.path)}
-                className={`nav-item w-full text-left ${isActive ? 'active' : ''}`}
-                style={isActive ? { backgroundColor: accentColor } : {}}>
-                <span className="text-xl w-7 text-center flex-shrink-0">{item.icon}</span>
-                <span className="text-base font-medium">{item.label}</span>
-                {isActive && <span className="ml-auto w-2 h-2 bg-white/60 rounded-full" />}
+              <button 
+                key={item.path} 
+                onClick={() => go(item.path)}
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-[15px] font-medium text-[15px] tracking-tight transition-all duration-150 ${
+                  isActive 
+                    ? (user?.role === 'superadmin'
+                        ? 'bg-gradient-to-r from-[#5856D6] to-purple-600 text-white font-semibold shadow-[0_4px_16px_rgba(88,86,214,0.35)]'
+                        : 'bg-gradient-to-r from-[#FF9500] to-[#FC8019] text-white font-semibold shadow-[0_4px_16px_rgba(255,149,0,0.35)]')
+                    : 'text-white/70 hover:bg-white/[0.08] hover:text-white active:scale-[0.98]'
+                }`}
+              >
+                <span className="text-xl w-6 text-center flex-shrink-0">{item.icon}</span>
+                <span className="text-sm font-medium">{item.label}</span>
+                {isActive && <span className="ml-auto w-1.5 h-1.5 bg-white rounded-full shadow-sm" />}
               </button>
             );
           })}
         </nav>
 
-        {/* Logout */}
+        {/* Sign Out (iOS destructive styling) */}
         <div className="p-4 mt-2 border-t border-white/10">
-          <button onClick={() => { logoutUser(); navigate('/login'); }}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl
-                       hover:bg-red-500/15 text-red-400 hover:text-red-300
-                       transition-all duration-200 text-base font-medium">
-            <span className="text-xl">🚪</span>
+          <button 
+            onClick={() => {
+              const isStaff = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'agent';
+              logoutUser();
+              navigate(isStaff ? '/admin/login' : '/login');
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-[16px]
+                       bg-red-500/10 hover:bg-red-500/20 text-[#FF453A]
+                       active:scale-[0.98] transition-all duration-150 text-sm font-semibold tracking-tight"
+          >
+            <span className="text-lg">🚪</span>
             <span>Sign Out</span>
           </button>
         </div>

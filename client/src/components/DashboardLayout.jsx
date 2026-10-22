@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 
-const roleColors = { donor: '#1BA672', admin: '#FC8019', agent: '#6C63FF', superadmin: '#282C3F' };
+const roleColors = { 
+  donor: '#34C759', 
+  admin: '#FF9500', 
+  agent: '#007AFF', 
+  superadmin: '#5856D6' 
+};
 
 export default function DashboardLayout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -11,7 +17,7 @@ export default function DashboardLayout({ children, title }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const accentColor = roleColors[user?.role] || '#FC8019';
+  const accentColor = roleColors[user?.role] || '#FF9500';
 
   const donorBottomNav = [
     { icon: '🏠', label: 'Home', path: '/donor' },
@@ -31,74 +37,104 @@ export default function DashboardLayout({ children, title }) {
     { icon: '👤', label: 'Profile', path: '/agent/profile' },
   ];
   const superadminBottomNav = [
-    { icon: '🏠', label: 'Home', path: '/superadmin' },
-    { icon: '👥', label: 'Create', path: '/superadmin/create' },
+    { icon: '🏠', label: 'Home', path: '/admin/superadmin' },
+    { icon: '👥', label: 'Create', path: '/admin/superadmin/create' },
   ];
   const bottomNavByRole = { donor: donorBottomNav, admin: adminBottomNav, agent: agentBottomNav, superadmin: superadminBottomNav };
   const bottomNav = bottomNavByRole[user?.role] || [];
 
   return (
-    <div className="min-h-screen bg-[#F9F9F9] font-sans">
+    <div className="min-h-screen bg-[#F2F2F7] font-sans text-[#1C1C1E]">
       <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main content */}
+      {/* Main content wrapper */}
       <div className="lg:ml-72 min-h-screen flex flex-col">
 
-        {/* Top bar */}
-        <header className="sticky top-0 z-20 bg-white border-b border-[#F0F0F0] px-4 lg:px-8 py-0 flex items-center justify-between h-16 lg:h-18"
-          style={{ boxShadow: '0 1px 4px rgba(40,44,63,0.06)' }}>
-
+        {/* iOS Frosted Glass Top Bar */}
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-2xl border-b border-black/[0.06] px-4 lg:px-8 flex items-center justify-between h-16 lg:h-18 transition-all">
           <div className="flex items-center gap-3">
             {/* Mobile hamburger */}
-            <button onClick={() => setSidebarOpen(true)}
-              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#F4F4F4] transition-colors">
-              <svg className="w-6 h-6 text-[#282C3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-[14px] bg-black/[0.04] active:scale-95 transition-all text-[#1C1C1E]"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h7" />
               </svg>
             </button>
-            <h1 className="font-display text-xl lg:text-2xl font-bold text-[#282C3F]">{title}</h1>
+            
+            <div>
+              <h1 className="font-display text-xl lg:text-2xl font-bold tracking-tight text-[#1C1C1E]">
+                {title}
+              </h1>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* iOS Dynamic Island style Points Badge */}
             {user?.role === 'donor' && (
-              <div className="hidden sm:flex items-center gap-2 bg-[#FFF3E8] px-4 py-2 rounded-full border border-[#FC8019]/20">
-                <span className="text-lg">⭐</span>
-                <span className="text-base font-bold text-[#FC8019]">{user?.points || 0} pts</span>
+              <div className="flex items-center gap-2 bg-[#FF9500]/12 px-3.5 py-1.5 rounded-full border border-[#FF9500]/25 shadow-sm">
+                <span className="text-sm">⭐</span>
+                <span className="text-sm font-bold text-[#C97100]">{user?.points || 0} pts</span>
               </div>
             )}
-            {/* Notification bell placeholder */}
-            <button className="w-10 h-10 hidden sm:flex items-center justify-center rounded-xl hover:bg-[#F4F4F4] transition-colors relative">
-              <span className="text-xl">🔔</span>
+
+            {/* Notification Bell */}
+            <button className="w-9 h-9 flex items-center justify-center rounded-full bg-black/[0.04] hover:bg-black/[0.07] active:scale-95 transition-all">
+              <span className="text-base">🔔</span>
             </button>
-            {/* Avatar */}
+
+            {/* iOS Squircle Avatar */}
             <button
               onClick={() => navigate(`/${user?.role}/profile`)}
-              className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center font-bold text-white text-base flex-shrink-0 ring-2 ring-offset-1"
-              style={{ backgroundColor: accentColor, ringColor: accentColor }}>
-              {user?.profilePhoto
-                ? <img src={user.profilePhoto} alt="" className="w-full h-full object-cover" />
-                : user?.name?.[0]?.toUpperCase()}
+              className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center font-bold text-white text-sm shadow-sm ring-2 ring-white active:scale-95 transition-all"
+              style={{ backgroundColor: accentColor }}
+            >
+              {user?.profilePhoto ? (
+                <img src={user.profilePhoto} alt="" className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.[0]?.toUpperCase()
+              )}
             </button>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-8 pb-24 lg:pb-10">
+        <main className="flex-1 p-4 lg:p-8 pb-28 lg:pb-12 max-w-7xl w-full mx-auto">
           {children}
         </main>
 
-        {/* Mobile bottom nav */}
-        <nav className="bottom-nav lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#F0F0F0] flex z-20"
-          style={{ boxShadow: '0 -2px 12px rgba(40,44,63,0.08)' }}>
+        {/* Mobile Floating iOS Tab Bar */}
+        <nav 
+          className="bottom-nav lg:hidden fixed bottom-3 left-4 right-4 z-40 bg-white/85 backdrop-blur-2xl border border-black/[0.08] rounded-[28px] shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-1.5 flex items-center justify-around"
+        >
           {bottomNav.map((item) => {
             const isActive = location.pathname === item.path;
             return (
-              <button key={item.path} onClick={() => navigate(item.path)}
-                className="flex-1 flex flex-col items-center py-3 gap-1 transition-colors min-h-[64px]"
-                style={isActive ? { color: accentColor } : { color: '#686B78' }}>
-                <span className="text-2xl leading-none">{item.icon}</span>
-                <span className="text-xs font-semibold">{item.label}</span>
-                {isActive && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />}
+              <button 
+                key={item.path} 
+                onClick={() => navigate(item.path)}
+                className={`flex-1 flex flex-col items-center py-2 gap-1 rounded-[22px] transition-all duration-200 ${
+                  isActive ? 'bg-black/[0.05]' : 'hover:bg-black/[0.02]'
+                }`}
+                style={{ minHeight: '52px' }}
+              >
+                <span className="text-xl leading-none">{item.icon}</span>
+                <span 
+                  className={`text-[11px] font-semibold tracking-tight ${
+                    isActive ? 'font-bold' : 'text-[#8E8E93]'
+                  }`}
+                  style={isActive ? { color: accentColor } : {}}
+                >
+                  {item.label}
+                </span>
+                {isActive && (
+                  <motion.span 
+                    layoutId="activeTabDot"
+                    className="w-1 h-1 rounded-full" 
+                    style={{ backgroundColor: accentColor }} 
+                  />
+                )}
               </button>
             );
           })}

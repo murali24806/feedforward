@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '../components/DashboardLayout';
 import { getAllDeliveries, getAgents } from '../services/api';
 import { getSocket } from '../services/socket';
@@ -22,13 +22,39 @@ const resolveTargetLoc = (d) => {
   return null;
 };
 
+const TILE_LAYERS = {
+  streets: {
+    name: 'Streets',
+    icon: '🗺️',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  detailed: {
+    name: 'Detailed City',
+    icon: '🏙️',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
+    maxZoom: 19,
+  },
+  satellite: {
+    name: 'Satellite',
+    icon: '🛰️',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS',
+    maxZoom: 19,
+  },
+};
+
 export default function AdminTracking() {
   const mapRef          = useRef(null);
   const mapInstanceRef  = useRef(null);
+  const currentTileRef  = useRef(null);
   const agentMarkersRef = useRef({});   // agentId  → Leaflet marker
   const donorMarkersRef = useRef({});   // deliveryId → Leaflet marker
   const adminMarkersRef = useRef({});   // deliveryId → Leaflet marker
   const routeLinesRef   = useRef({});   // deliveryId → Leaflet polyline group
+  const focusedRouteRef = useRef(null); // High-contrast OSRM road route for selected delivery
   const initRef         = useRef(false);
 
   // Keep a ref copy of deliveries so socket callbacks always see fresh data
@@ -38,7 +64,141 @@ export default function AdminTracking() {
   const [agentLocations, setAgentLocations]     = useState({});   // agentId → {lat,lng,deliveryId}
   const [loading, setLoading]                   = useState(true);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [hudData, setHudData]                   = useState({ eta: null, distance: null, loading: false });
+  const [activeLayer, setActiveLayer]           = useState('streets');
+  const [isFullscreen, setIsFullscreen]         = useState(false);
   const detailRef = useRef(null);
+
+  const changeTileLayer = (layerKey) => {
+    const map = mapInstanceRef.current;
+    const L   = window.L;
+    if (!map || !L) return;
+
+    const layerConfig = TILE_LAYERS[layerKey] || TILE_LAYERS.streets;
+    if (currentTileRef.current) {
+      map.removeLayer(currentTileRef.current);
+    }
+
+    const newTile = L.tileLayer(layerConfig.url, {
+      attribution: layerConfig.attribution,
+      maxZoom: layerConfig.maxZoom,
+      crossOrigin: true,
+    }).addTo(map);
+
+    currentTileRef.current = newTile;
+    setActiveLayer(layerKey);
+  };
+
+  const recenterAll = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const points = [];
+    Object.values(agentLocations).forEach(loc => {
+      if (isValidLoc(loc)) points.push([Number(loc.lat), Number(loc.lng)]);
+    });
+    activeDeliveries.forEach(del => {
+      const loc = resolveTargetLoc(del);
+      if (isValidLoc(loc)) points.push([Number(loc.lat), Number(loc.lng)]);
+    });
+    if (points.length >= 2) {
+      map.fitBounds(points, { padding: [60, 60], animate: true });
+    } else if (points.length === 1) {
+      map.setView(points[0], 14, { animate: true });
+    } else {
+      map.setView([17.385, 78.4867], 12);
+    }
+  };
+
+  // ── Road Route Fetcher (OSRM Turn-by-Turn Navigation) ────────────────────────
+  const updateRoadRoute = useCallback(async (del, curAgentLoc) => {
+    const map = mapInstanceRef.current;
+    const L   = window.L;
+    if (!map || !L || !del) return;
+
+    const targetLoc = resolveTargetLoc(del);
+    if (!isValidLoc(curAgentLoc) || !isValidLoc(targetLoc)) {
+      if (focusedRouteRef.current) {
+        focusedRouteRef.current.clearLayers();
+      }
+      setHudData({ eta: null, distance: null, loading: false });
+      return;
+    }
+
+    setHudData(prev => ({ ...prev, loading: true }));
+
+    const from = { lat: Number(curAgentLoc.lat), lng: Number(curAgentLoc.lng) };
+    const to   = { lat: Number(targetLoc.lat), lng: Number(targetLoc.lng) };
+
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      const data = await res.json();
+
+      if (data.code === 'Ok' && data.routes?.length > 0) {
+        const route = data.routes[0];
+        const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+
+        if (focusedRouteRef.current) {
+          focusedRouteRef.current.clearLayers();
+        } else {
+          focusedRouteRef.current = L.layerGroup().addTo(map);
+        }
+
+        // White border buffer for high contrast against any map layer
+        L.polyline(coords, {
+          color: '#ffffff',
+          weight: 8,
+          opacity: 0.95,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(focusedRouteRef.current);
+
+        // Vibrant emerald green road polyline
+        L.polyline(coords, {
+          color: '#1BA672',
+          weight: 4.5,
+          opacity: 1,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(focusedRouteRef.current);
+
+        setHudData({
+          eta: Math.round(route.duration / 60),
+          distance: (route.distance / 1000).toFixed(1),
+          loading: false,
+        });
+      } else {
+        throw new Error('OSRM route failed');
+      }
+    } catch {
+      // Fallback straight line
+      if (focusedRouteRef.current) {
+        focusedRouteRef.current.clearLayers();
+      } else {
+        focusedRouteRef.current = L.layerGroup().addTo(map);
+      }
+      L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
+        color: '#1BA672',
+        weight: 4,
+        dashArray: '8, 8',
+        opacity: 0.9,
+      }).addTo(focusedRouteRef.current);
+
+      // Simple Haversine distance estimate
+      const R = 6371;
+      const dLat = (to.lat - from.lat) * Math.PI / 180;
+      const dLon = (to.lng - from.lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(from.lat*Math.PI/180) * Math.cos(to.lat*Math.PI/180) * Math.sin(dLon/2)**2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const dist = (R * c).toFixed(1);
+
+      setHudData({
+        eta: Math.max(1, Math.round(dist * 2.5)),
+        distance: dist,
+        loading: false,
+      });
+    }
+  }, []);
 
   // ── fetch all deliveries + agents ──────────────────────────────────────────
   useEffect(() => {
@@ -95,12 +255,16 @@ export default function AdminTracking() {
     const L = window.L;
     if (!L) return;
 
-    const map = L.map(mapRef.current, { zoomControl: false })
+    const map = L.map(mapRef.current, { zoomControl: false, scrollWheelZoom: true })
       .setView([17.385, 78.4867], 12);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 20,
+    const defaultTile = L.tileLayer(TILE_LAYERS.streets.url, {
+      attribution: TILE_LAYERS.streets.attribution,
+      maxZoom: TILE_LAYERS.streets.maxZoom,
+      crossOrigin: true,
     }).addTo(map);
+
+    currentTileRef.current = defaultTile;
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -145,7 +309,8 @@ export default function AdminTracking() {
           donorMarkersRef.current[del._id] = L.marker(
             [Number(loc.lat), Number(loc.lng)], { icon }
           ).addTo(map)
-           .bindPopup(`<b>📍 ${del.foodPostId?.foodName || 'Pickup'}</b><br/>Donor: ${del.donorId?.name || '—'}`);
+           .bindPopup(`<b>📍 ${del.foodPostId?.foodName || 'Pickup'}</b><br/>Donor: ${del.donorId?.name || '—'}`)
+           .on('click', () => focusDelivery(del));
         }
       }
 
@@ -166,7 +331,8 @@ export default function AdminTracking() {
           adminMarkersRef.current[del._id] = L.marker(
             [Number(loc.lat), Number(loc.lng)], { icon }
           ).addTo(map)
-           .bindPopup(`<b>📍 Drop-off</b><br/>Admin Location`);
+           .bindPopup(`<b>📍 Drop-off</b><br/>Admin Location`)
+           .on('click', () => focusDelivery(del));
         }
       }
     });
@@ -219,12 +385,16 @@ export default function AdminTracking() {
       if (agentMarkersRef.current[agentId]) {
         agentMarkersRef.current[agentId].setLatLng([lat, lng]);
       } else {
-        agentMarkersRef.current[agentId] = L.marker([lat, lng], { icon, zIndexOffset: 1000 })
+        const marker = L.marker([lat, lng], { icon, zIndexOffset: 1000 })
           .addTo(map)
-          .bindPopup(`<b>🚴 ${name}</b><br/>${phone}<br/><span style="color:#FC8019;font-size:11px">● Live GPS</span>`);
+          .bindPopup(`<b>🚴 ${name}</b><br/>${phone}<br/><span style="color:#FC8019;font-size:11px">● Live GPS · Click to track</span>`);
+        if (del) {
+          marker.on('click', () => focusDelivery(del));
+        }
+        agentMarkersRef.current[agentId] = marker;
       }
 
-      // Draw straight dashed line agent → destination (refreshes each update)
+      // Draw dashed line agent → destination (only if not currently focused with road route)
       if (deliveryId) {
         const d = deliveriesRef.current.find(x => x._id === deliveryId);
         let targetLoc = resolveTargetLoc(d);
@@ -253,11 +423,11 @@ export default function AdminTracking() {
     if (!map) return;
 
     const agentId  = del.agentId?._id || del.agentId;
-    const agentLoc = agentLocations[agentId];
+    const agentLoc = agentLocations[agentId] || (isValidLoc(del.agentLocation) ? del.agentLocation : null);
     let targetLoc = resolveTargetLoc(del);
     const points   = [];
 
-    if (agentLoc) points.push([Number(agentLoc.lat), Number(agentLoc.lng)]);
+    if (isValidLoc(agentLoc)) points.push([Number(agentLoc.lat), Number(agentLoc.lng)]);
     if (isValidLoc(targetLoc)) points.push([Number(targetLoc.lat), Number(targetLoc.lng)]);
 
     if (points.length >= 2) {
@@ -266,8 +436,30 @@ export default function AdminTracking() {
       map.setView(points[0], 16, { animate: true });
     }
 
+    if (isValidLoc(agentLoc)) {
+      updateRoadRoute(del, agentLoc);
+    }
+
     // Scroll to map on mobile
     mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // ── update road route dynamically when courier location streams ───────────
+  useEffect(() => {
+    if (!selectedDelivery) return;
+    const agentId = selectedDelivery.agentId?._id || selectedDelivery.agentId;
+    const curLoc = agentLocations[agentId] || (isValidLoc(selectedDelivery.agentLocation) ? selectedDelivery.agentLocation : null);
+    if (isValidLoc(curLoc)) {
+      updateRoadRoute(selectedDelivery, curLoc);
+    }
+  }, [agentLocations, selectedDelivery, updateRoadRoute]);
+
+  const clearFocusedDelivery = () => {
+    setSelectedDelivery(null);
+    if (focusedRouteRef.current) {
+      focusedRouteRef.current.clearLayers();
+    }
+    setHudData({ eta: null, distance: null, loading: false });
   };
 
   const liveCount = Object.keys(agentLocations).length;
@@ -279,7 +471,7 @@ export default function AdminTracking() {
       <div className="mb-5 flex flex-wrap gap-4 items-start justify-between">
         <div>
           <h2 className="font-display text-2xl font-bold text-[#282C3F]">🗺️ Live Agent Map</h2>
-          <p className="text-[#93959F] text-sm mt-1">Both agent GPS and donor pickup pins shown on map</p>
+          <p className="text-[#93959F] text-sm mt-1">Both agent GPS and donor pickup pins shown on map with real-time road routing</p>
         </div>
         <div className="flex gap-3 flex-wrap">
           <div className="card py-3 px-5 flex items-center gap-2">
@@ -311,8 +503,158 @@ export default function AdminTracking() {
         </div>
       </div>
 
-      {/* Map */}
-      <div className="card mb-6 p-0 overflow-hidden" style={{ borderRadius: 16 }}>
+      {/* Map with Navigation Controls & Live Navigation HUD */}
+      <div 
+        className={`card mb-6 p-0 overflow-hidden relative transition-all ${
+          isFullscreen ? 'fixed inset-0 z-50 rounded-none m-0' : 'rounded-[20px]'
+        }`}
+      >
+        {/* Floating Top Controls: Layer Switcher + Recenter + Fullscreen */}
+        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-2">
+          {/* Layer switcher */}
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1 flex shadow-md border border-black/10">
+            {Object.entries(TILE_LAYERS).map(([key, item]) => {
+              const isSelected = activeLayer === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => changeTileLayer(key)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    isSelected
+                      ? 'bg-[#FC8019] text-white shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span className="hidden sm:inline">{item.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Recenter All Fleet Button */}
+          <button
+            type="button"
+            onClick={recenterAll}
+            className="bg-white/95 backdrop-blur-md border border-black/10 text-gray-800 rounded-xl px-3 py-2 text-xs font-bold shadow-md hover:bg-gray-50 flex items-center gap-1.5 active:scale-95 transition-all"
+            title="Recenter view on all active couriers"
+          >
+            <span>🎯</span>
+            <span className="hidden sm:inline">Recenter</span>
+          </button>
+
+          {/* Fullscreen Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="bg-white/95 backdrop-blur-md border border-black/10 text-gray-800 rounded-xl w-8 h-8 flex items-center justify-center text-xs font-bold shadow-md hover:bg-gray-50 active:scale-95 transition-all"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Expand Fullscreen Radar'}
+          >
+            {isFullscreen ? '✕' : '⛶'}
+          </button>
+        </div>
+
+        {/* FLOATING LIVE NAVIGATION HUD (When an active delivery is focused) */}
+        <AnimatePresence>
+          {selectedDelivery && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 15, scale: 0.95 }}
+              className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-[1000] bg-white/95 backdrop-blur-xl rounded-2xl p-4 shadow-2xl border border-black/10"
+            >
+              {/* HUD Header */}
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-xs font-bold text-gray-800 tracking-tight">
+                    {selectedDelivery.status === 'picked_up' ? '📦 En Route to Drop-off' : '🚴 En Route to Pickup'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearFocusedDelivery}
+                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold transition-colors"
+                  title="Close Navigation HUD"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Food & Destination */}
+              <p className="font-bold text-sm text-[#282C3F] truncate">
+                {selectedDelivery.foodPostId?.foodName || 'Food Item'}
+              </p>
+
+              {/* ETA & Distance Pill */}
+              <div className="my-2.5 flex items-center gap-2 flex-wrap">
+                {hudData.loading ? (
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-lg animate-pulse font-medium">
+                    Calculating road route...
+                  </span>
+                ) : hudData.eta ? (
+                  <div className="flex items-center gap-2 bg-[#1BA672]/10 border border-[#1BA672]/20 px-3 py-1 rounded-xl">
+                    <span className="text-sm">⏱️</span>
+                    <span className="text-xs font-bold text-[#1BA672]">
+                      ~{hudData.eta} mins away · {hudData.distance} km
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg font-medium">
+                    ● Live GPS Active
+                  </span>
+                )}
+              </div>
+
+              {/* Courier info row */}
+              <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-[#FC8019] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {selectedDelivery.agentId?.name?.[0] || 'A'}
+                  </div>
+                  <div className="truncate">
+                    <p className="text-xs font-bold text-[#282C3F] truncate">{selectedDelivery.agentId?.name || 'Courier'}</p>
+                    <p className="text-[10px] text-gray-500">{selectedDelivery.agentId?.vehicleType || 'Motorbike'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {selectedDelivery.agentId?.phone && (
+                    <a
+                      href={`tel:${selectedDelivery.agentId.phone}`}
+                      className="w-7 h-7 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 flex items-center justify-center text-xs"
+                      title="Call Courier"
+                    >
+                      📞
+                    </a>
+                  )}
+                  {(() => {
+                    const agentId = selectedDelivery.agentId?._id || selectedDelivery.agentId;
+                    const aLoc = agentLocations[agentId] || (isValidLoc(selectedDelivery.agentLocation) ? selectedDelivery.agentLocation : null);
+                    const tLoc = resolveTargetLoc(selectedDelivery);
+                    if (isValidLoc(aLoc) && isValidLoc(tLoc)) {
+                      return (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&origin=${aLoc.lat},${aLoc.lng}&destination=${tLoc.lat},${tLoc.lng}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] font-bold bg-[#1BA672] hover:bg-[#138A5C] text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+                          title="Open turn-by-turn navigation in Google Maps"
+                        >
+                          <span>🧭 Turn-by-Turn</span>
+                          <span>↗</span>
+                        </a>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* No-GPS notice shown when agents are assigned but no live GPS yet */}
         {activeDeliveries.length > 0 && liveCount === 0 && (
           <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 text-amber-700 text-sm font-medium flex items-center gap-2">
@@ -320,7 +662,7 @@ export default function AdminTracking() {
             Agent GPS not active yet — markers will appear once agents start navigation
           </div>
         )}
-        <div ref={mapRef} style={{ height: '460px' }} />
+        <div ref={mapRef} style={{ height: isFullscreen ? '100vh' : '480px' }} />
       </div>
 
       {/* Delivery cards */}
@@ -390,18 +732,22 @@ export default function AdminTracking() {
                     </div>
                   </div>
 
-                  {/* Status + GPS coords */}
+                  {/* Status + GPS coords + Live Navigation Action */}
                   <div className="mt-3 pt-3 border-t border-[#F4F4F4] flex items-center justify-between">
                     <span className="badge-orange capitalize text-xs">
                       {del.status.replace('_', ' ')}
                     </span>
-                    {agentLoc ? (
-                      <span className="text-xs text-green-600">
-                        {Number(agentLoc.lat).toFixed(4)}, {Number(agentLoc.lng).toFixed(4)}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-[#93959F]">Click to focus map →</span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        focusDelivery(del);
+                      }}
+                      className="text-xs font-semibold text-[#1BA672] bg-[#1BA672]/10 hover:bg-[#1BA672]/20 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                    >
+                      <span>🧭</span>
+                      <span>Live Nav</span>
+                    </button>
                   </div>
                 </motion.div>
               );

@@ -29,9 +29,9 @@ router.get('/all', protect, requireRole('admin'), async (req, res) => {
   try {
     const deliveries = await Delivery.find({ removedBy: { $nin: ['admin'] } })
       .populate('foodPostId')
-      .populate('donorId', 'name phone')
-      .populate('agentId', 'name phone profilePhoto')
-      .populate('adminId', 'name organizationName phone')
+      .populate('donorId', 'name phone address profilePhoto')
+      .populate('agentId', 'name phone profilePhoto vehicleType isAvailable')
+      .populate('adminId', 'name organizationName phone address profilePhoto')
       .sort({ createdAt: -1 });
     res.json(deliveries);
   } catch (err) {

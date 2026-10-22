@@ -9,11 +9,15 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['donor', 'admin', 'agent', 'superadmin'], required: true },
   profilePhoto: { type: String, default: '' },
   address: { type: String, default: '' },
+  city: { type: String, default: '' },
+  pincode: { type: String, default: '' },
   bio: { type: String, default: '' },
   organizationName: { type: String, default: '' }, // for admins
+  donorType: { type: String, default: '' }, // for donors (e.g., Individual, Restaurant, Caterer, Bakery)
   points: { type: Number, default: 0 },
   vehicleType: { type: String, default: '' }, // for agents
   isAvailable: { type: Boolean, default: true }, // for agents
+  isProfileComplete: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

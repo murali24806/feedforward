@@ -18,6 +18,7 @@ const seedSuperAdmin = async () => {
       email: 'superadmin@feedforward.com',
       password: 'superadmin123', // Please change this after first login
       role: 'superadmin',
+      isProfileComplete: true,
     });
 
     console.log('Superadmin created successfully:');
