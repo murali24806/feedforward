@@ -20,6 +20,7 @@ import AgentDeliveries from './pages/AgentDeliveries';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SuperAdminCreateUser from './pages/SuperAdminCreateUser';
 import AdminLoginPage from './pages/AdminLoginPage';
+import CitizenFoodRequestPage from './pages/CitizenFoodRequestPage';
 
 // Protected Route (Requires logged in user AND completed profile)
 function Protected({ children, role }) {
@@ -70,6 +71,7 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/request-food" element={<CitizenFoodRequestPage />} />
 
           {/* Secure Admin Login Portal */}
           <Route path="/admin/login" element={<AdminLoginPage />} />

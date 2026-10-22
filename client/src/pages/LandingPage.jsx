@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import CitizenFoodRequestModal from '../components/CitizenFoodRequestModal';
 import './LandingPage.css';
 
 export default function LandingPage() {
@@ -11,6 +12,7 @@ export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
   const [trackStep, setTrackStep] = useState(0);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
 
   // Form State
   const [formState, setFormState] = useState({
@@ -227,6 +229,14 @@ export default function LandingPage() {
             </div>
 
             <div className="nav-actions">
+              <button
+                type="button"
+                onClick={() => setRequestModalOpen(true)}
+                className="nav-btn-request"
+                title="Free Food Assistance for Individuals & Families (No Login Required)"
+              >
+                🍽️ Need Food?
+              </button>
               <button onClick={() => navigate('/login')} className="nav-btn-donate">
                 Donate Now
               </button>
@@ -298,8 +308,19 @@ export default function LandingPage() {
           ✉️ Contact
         </a>
         <div className="mob-divider"></div>
+        <button
+          type="button"
+          onClick={() => {
+            setMobileMenuOpen(false);
+            setRequestModalOpen(true);
+          }}
+          className="mob-request-btn"
+          style={{ border: 'none', width: '100%', marginBottom: '8px' }}
+        >
+          🍽️ Need Food? (Free Request)
+        </button>
         <button onClick={() => navigate('/login')} className="mob-cta" style={{ border: 'none', width: '100%' }}>
-          🚀 Get Started Free
+          🚀 Get Started / Donate
         </button>
       </div>
 
@@ -321,9 +342,29 @@ export default function LandingPage() {
                 Connecting food donors, NGOs, and delivery agents to eliminate food waste and nourish
                 communities.
               </p>
-              <button onClick={() => navigate('/login')} className="btn btn-orange">
-                🚀 Get Started Free
-              </button>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button onClick={() => navigate('/login')} className="btn btn-orange">
+                  🚀 Get Started Free
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequestModalOpen(true)}
+                  className="btn"
+                  style={{
+                    background: '#16A34A',
+                    color: '#ffffff',
+                    padding: '13px 24px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 14px rgba(22, 163, 74, 0.35)',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🍽️ Need Food? (No Login)
+                </button>
+              </div>
             </div>
             <div className="slide-emoji">
               <img
@@ -351,9 +392,29 @@ export default function LandingPage() {
                 Have leftover food? Post it in under a minute with GPS location. NGOs will collect it
                 fast.
               </p>
-              <button onClick={() => navigate('/login')} className="btn btn-orange">
-                🤲 Donate Food
-              </button>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button onClick={() => navigate('/login')} className="btn btn-orange">
+                  🤲 Donate Food
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequestModalOpen(true)}
+                  className="btn"
+                  style={{
+                    background: '#16A34A',
+                    color: '#ffffff',
+                    padding: '13px 24px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 14px rgba(22, 163, 74, 0.35)',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🍽️ Need Food? (Request Meals)
+                </button>
+              </div>
             </div>
             <div className="slide-emoji">
               <img
@@ -1084,6 +1145,12 @@ export default function LandingPage() {
           />
         </svg>
       </a>
+
+      {/* ── CITIZEN / BENEFICIARY FOOD REQUEST MODAL (NO LOGIN REQUIRED) ── */}
+      <CitizenFoodRequestModal
+        isOpen={requestModalOpen}
+        onClose={() => setRequestModalOpen(false)}
+      />
     </div>
   );
 }

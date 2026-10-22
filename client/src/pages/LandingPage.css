@@ -308,6 +308,28 @@
       gap: 8px;
     }
 
+    .nav-btn-request {
+      padding: 9px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      background: #16A34A;
+      border: 1.5px solid #16A34A;
+      transition: all .18s;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+    }
+
+    .nav-btn-request:hover {
+      background: #15803d;
+      border-color: #15803d;
+      transform: translateY(-1px);
+    }
+
     .nav-btn-donate {
       padding: 9px 18px;
       border-radius: var(--radius-md);
@@ -321,6 +343,21 @@
 
     .nav-btn-donate:hover {
       background: rgba(252, 107, 26, .18);
+    }
+
+    .mob-request-btn {
+      padding: 13px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: #16A34A;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+      cursor: pointer;
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      transition: all .2s;
     }
 
     .hamburger {

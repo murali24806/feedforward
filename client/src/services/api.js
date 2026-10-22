@@ -71,4 +71,12 @@ export const deleteSuperAdminFoodPost = (id) => API.delete(`/superadmin/food-pos
 export const getSuperAdminDeliveries = () => API.get('/superadmin/deliveries');
 export const getSuperAdminActivityLogs = () => API.get('/superadmin/activity-logs');
 
+// Citizen / Beneficiary Direct Food Requests (Public & Admin)
+export const submitCitizenRequest = (data) => API.post('/citizen-requests', data);
+export const getCitizenRequestStatus = (phone) => API.get(`/citizen-requests/status/${phone}`);
+export const getAvailableSurplusFood = () => API.get('/citizen-requests/available-food');
+export const getAllCitizenRequests = (params) => API.get('/citizen-requests', { params });
+export const updateCitizenRequestStatus = (id, data) => API.put(`/citizen-requests/${id}/status`, data);
+export const deleteCitizenRequest = (id) => API.delete(`/citizen-requests/${id}`);
+
 export default API;
