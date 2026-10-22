@@ -48,7 +48,7 @@ router.get('/donor/my', protect, requireRole('donor'), async (req, res) => {
     })
       .populate('foodPostId')
       .populate('agentId', 'name phone profilePhoto vehicleType')
-      .populate('adminId', 'name organizationName phone')
+      .populate('adminId', 'name organizationName phone profilePhoto address')
       .sort({ createdAt: -1 });
     res.json(deliveries);
   } catch (err) {

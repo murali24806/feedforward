@@ -19,15 +19,35 @@ const isValidLoc = (loc) =>
   !isNaN(Number(loc.lat)) && !isNaN(Number(loc.lng)) &&
   !(Number(loc.lat) === 0 && Number(loc.lng) === 0);
 
-const resolveTargetLoc = (d) => {
+const resolveDonorLoc = (d) => {
   if (!d) return null;
-  if (d.status === 'picked_up') {
-    if (isValidLoc(d.adminLocation)) return d.adminLocation;
-    if (isValidLoc(d.adminId?.location)) return d.adminId.location;
-    return null;
+  const candidates = [d.foodPostId?.location, d.donorId?.location];
+  for (const c of candidates) {
+    if (isValidLoc(c)) {
+      return {
+        lat: Number(c.lat),
+        lng: Number(c.lng),
+        name: d.foodPostId?.foodName ? `${d.foodPostId.foodName} Pickup` : (d.donorId?.name || 'Donor Pickup'),
+        address: c.address || d.foodPostId?.pickupAddress || d.donorId?.address || ''
+      };
+    }
   }
-  if (isValidLoc(d.foodPostId?.location)) return d.foodPostId.location;
-  if (isValidLoc(d.donorId?.location)) return d.donorId.location;
+  return null;
+};
+
+const resolveDestLoc = (d) => {
+  if (!d) return null;
+  const candidates = [d.adminLocation, d.foodPostId?.adminLocation, d.adminId?.location];
+  for (const c of candidates) {
+    if (isValidLoc(c)) {
+      return {
+        lat: Number(c.lat),
+        lng: Number(c.lng),
+        name: d.adminId?.organizationName || d.adminId?.name || 'NGO Drop-off Facility',
+        address: c.address || d.adminId?.address || 'NGO Distribution Center'
+      };
+    }
+  }
   return null;
 };
 
@@ -134,11 +154,12 @@ export default function AdminDeliveries() {
 
   const completedStatuses = ['delivered', 'rejected_by_agent'];
 
-  // Current target location for the open modal
-  const modalTargetLoc = selectedDelivery ? resolveTargetLoc(selectedDelivery) : null;
+  // Current locations for the open modal
+  const modalDonorLoc = selectedDelivery ? resolveDonorLoc(selectedDelivery) : null;
+  const modalDestLoc = selectedDelivery ? resolveDestLoc(selectedDelivery) : null;
   const currentAgentLoc = liveAgentLoc || selectedDelivery?.agentLocation;
   const hasValidAgentLoc = isValidLoc(currentAgentLoc);
-  const hasValidTargetLoc = isValidLoc(modalTargetLoc);
+  const hasValidTargetLoc = isValidLoc(modalDonorLoc) || isValidLoc(modalDestLoc);
 
   return (
     <DashboardLayout title="Deliveries">
@@ -364,7 +385,9 @@ export default function AdminDeliveries() {
                 <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative">
                   <LiveMap
                     agentLocation={currentAgentLoc}
-                    donorLocation={modalTargetLoc}
+                    donorLocation={modalDonorLoc}
+                    destinationLocation={modalDestLoc}
+                    isPickedUp={selectedDelivery.status === 'picked_up'}
                     height="380px"
                     showETA={true}
                     mode="admin"

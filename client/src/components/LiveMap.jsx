@@ -34,18 +34,22 @@ const TILE_LAYERS = {
 export default function LiveMap({
   agentLocation,
   donorLocation,
+  destinationLocation, // NEW: { lat, lng, address, name }
+  isPickedUp = false,   // NEW: whether food is picked up and courier is heading to drop-off
   height = '320px',
   showETA = true,
-  mode = 'agent',   // 'agent' | 'donor' | 'admin'
+  mode = 'agent',       // 'agent' | 'donor' | 'admin'
   zoom = 14,
 }) {
-  const mapRef          = useRef(null);
-  const mapInstanceRef  = useRef(null);
-  const currentTileRef  = useRef(null);
-  const agentMarkerRef  = useRef(null);
-  const donorMarkerRef  = useRef(null);
-  const routeGroupRef   = useRef(null);
-  const initializedRef  = useRef(false);
+  const mapRef                  = useRef(null);
+  const mapInstanceRef          = useRef(null);
+  const currentTileRef          = useRef(null);
+  const agentMarkerRef          = useRef(null);
+  const donorMarkerRef          = useRef(null);
+  const destinationMarkerRef    = useRef(null);
+  const routeGroupRef           = useRef(null);
+  const secondaryRouteGroupRef  = useRef(null);
+  const initializedRef          = useRef(false);
 
   const [activeLayer, setActiveLayer] = useState('streets');
   const [eta, setEta]                 = useState(null);
@@ -55,6 +59,7 @@ export default function LiveMap({
   const [autoFollow, setAutoFollow]   = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [targetLabel, setTargetLabel] = useState('TO PICKUP');
 
   /* ── Switch Tile Layer smoothly without rebuilding map ── */
   const changeTileLayer = (layerKey) => {
@@ -91,6 +96,7 @@ export default function LiveMap({
     let center = [17.385, 78.4867];
     if (isValid(agentLocation)) center = [Number(agentLocation.lat), Number(agentLocation.lng)];
     else if (isValid(donorLocation)) center = [Number(donorLocation.lat), Number(donorLocation.lng)];
+    else if (isValid(destinationLocation)) center = [Number(destinationLocation.lat), Number(destinationLocation.lng)];
 
     const map = L.map(mapRef.current, {
       center,
@@ -124,15 +130,18 @@ export default function LiveMap({
       currentTileRef.current = null;
       agentMarkerRef.current = null;
       donorMarkerRef.current = null;
-      routeGroupRef.current  = null;
+      destinationMarkerRef.current = null;
+      routeGroupRef.current = null;
+      secondaryRouteGroupRef.current = null;
       initializedRef.current = false;
       setMapReady(false);
     };
   }, []);
 
   /* ── 2. Draw / update route via OSRM with smooth polyline ── */
-  const drawRoute = useCallback(async (from, to, map, L) => {
+  const drawRoute = useCallback(async (from, to, map, L, label = 'TO PICKUP') => {
     setRouteLoading(true);
+    setTargetLabel(label);
     try {
       const url =
         `https://router.project-osrm.org/route/v1/driving/` +
@@ -166,8 +175,9 @@ export default function LiveMap({
         }).addTo(routeGroupRef.current);
 
         // Core vivid navigation line
+        const lineColor = isPickedUp ? '#2563EB' : '#FC8019';
         L.polyline(coords, {
-          color: '#FC8019',
+          color: lineColor,
           weight: 4.5,
           opacity: 1,
           lineCap: 'round',
@@ -175,7 +185,14 @@ export default function LiveMap({
         }).addTo(routeGroupRef.current);
 
         if (autoFollow) {
-          map.fitBounds(L.latLngBounds(coords), { padding: [55, 55], maxZoom: 16 });
+          const allPoints = [...coords];
+          if (isValid(destinationLocation) && !isPickedUp) {
+            allPoints.push([Number(destinationLocation.lat), Number(destinationLocation.lng)]);
+          }
+          if (isValid(donorLocation) && isPickedUp) {
+            allPoints.push([Number(donorLocation.lat), Number(donorLocation.lng)]);
+          }
+          map.fitBounds(L.latLngBounds(allPoints), { padding: [55, 55], maxZoom: 16 });
         }
       } else {
         throw new Error('No OSRM route');
@@ -187,9 +204,10 @@ export default function LiveMap({
       } else {
         routeGroupRef.current = L.layerGroup().addTo(map);
       }
+      const lineColor = isPickedUp ? '#2563EB' : '#FC8019';
       L.polyline(
         [[from.lat, from.lng], [to.lat, to.lng]],
-        { color: '#FC8019', weight: 4, dashArray: '8, 8', opacity: 0.85 }
+        { color: lineColor, weight: 4, dashArray: '8, 8', opacity: 0.85 }
       ).addTo(routeGroupRef.current);
 
       if (autoFollow) {
@@ -198,7 +216,7 @@ export default function LiveMap({
     } finally {
       setRouteLoading(false);
     }
-  }, [autoFollow]);
+  }, [autoFollow, isPickedUp, destinationLocation, donorLocation]);
 
   /* ── 3. Update Markers & Route When Coordinates Stream ── */
   useEffect(() => {
@@ -207,17 +225,19 @@ export default function LiveMap({
     const L   = window.L;
     if (!map || !L) return;
 
-    /* -- Donor / Pickup Pin -- */
+    /* -- Donor / Food Pickup Pin (Green 🏠) -- */
     if (isValid(donorLocation)) {
       const lat = Number(donorLocation.lat);
       const lng = Number(donorLocation.lng);
+      const donorName = donorLocation.name || 'Food Pickup Point';
+      const donorAddress = donorLocation.address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
       const donorIcon = L.divIcon({
         html: `
           <div style="position:relative;width:40px;height:50px">
             <div style="
               width:40px;height:40px;
-              background:#1BA672;
+              background:${isPickedUp ? '#059669' : '#1BA672'};
               border-radius:50% 50% 50% 0;
               transform:rotate(-45deg);
               border:3px solid white;
@@ -229,6 +249,16 @@ export default function LiveMap({
               font-size:18px;
               line-height:1;
             ">🏠</span>
+            ${isPickedUp ? `
+              <div style="
+                position:absolute;bottom:6px;right:0;
+                width:16px;height:16px;
+                background:#34C759;
+                border:2px solid white;
+                border-radius:50%;
+                display:flex;align-items:center;justify-content:center;
+                color:white;font-size:9px;font-weight:bold;
+              ">✓</div>` : ''}
           </div>`,
         className: '',
         iconSize:   [40, 50],
@@ -241,16 +271,80 @@ export default function LiveMap({
           .addTo(map)
           .bindPopup(`
             <div style="font-family:sans-serif;padding:4px">
-              <b style="color:#1BA672;font-size:13px">📍 Food Pickup Point</b><br/>
-              <span style="font-size:11px;color:#666">${lat.toFixed(5)}, ${lng.toFixed(5)}</span>
+              <b style="color:#1BA672;font-size:13px">📍 ${isPickedUp ? 'Food Pickup Point (Collected ✓)' : 'Food Pickup Point'}</b><br/>
+              <span style="font-size:11px;font-weight:600;color:#282C3F">${donorName}</span><br/>
+              <span style="font-size:10px;color:#666">${donorAddress}</span>
             </div>
           `);
       } else {
+        donorMarkerRef.current.setIcon(donorIcon);
         donorMarkerRef.current.setLatLng([lat, lng]);
       }
+    } else if (donorMarkerRef.current) {
+      donorMarkerRef.current.remove();
+      donorMarkerRef.current = null;
     }
 
-    /* -- Agent / Courier Pin with Live Pulse -- */
+    /* -- Delivery Destination / NGO Drop-off Pin (Royal Blue 🏢) -- */
+    if (isValid(destinationLocation)) {
+      const destLat = Number(destinationLocation.lat);
+      const destLng = Number(destinationLocation.lng);
+      const destName = destinationLocation.organizationName || destinationLocation.name || 'NGO Drop-off Facility';
+      const destAddress = destinationLocation.address || `${destLat.toFixed(5)}, ${destLng.toFixed(5)}`;
+
+      const destIcon = L.divIcon({
+        html: `
+          <div style="position:relative;width:40px;height:50px">
+            <div style="
+              width:40px;height:40px;
+              background:linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+              border-radius:50% 50% 50% 0;
+              transform:rotate(-45deg);
+              border:3px solid white;
+              box-shadow:0 4px 16px rgba(37,99,235,0.55);
+            "></div>
+            <span style="
+              position:absolute;
+              top:7px;left:7px;
+              font-size:18px;
+              line-height:1;
+            ">🏢</span>
+            ${isPickedUp ? `
+              <div style="
+                position:absolute;bottom:6px;right:0;
+                width:14px;height:14px;
+                background:#FC8019;
+                border:2px solid white;
+                border-radius:50%;
+                animation:pulseLive 1.2s infinite;
+              "></div>` : ''}
+          </div>`,
+        className: '',
+        iconSize:   [40, 50],
+        iconAnchor: [20, 50],
+        popupAnchor:[0, -50],
+      });
+
+      if (!destinationMarkerRef.current) {
+        destinationMarkerRef.current = L.marker([destLat, destLng], { icon: destIcon, zIndexOffset: 200 })
+          .addTo(map)
+          .bindPopup(`
+            <div style="font-family:sans-serif;padding:4px">
+              <b style="color:#2563EB;font-size:13px">🏢 Drop-off Destination (NGO)</b><br/>
+              <span style="font-size:11px;font-weight:600;color:#282C3F">${destName}</span><br/>
+              <span style="font-size:10px;color:#666">${destAddress}</span>
+            </div>
+          `);
+      } else {
+        destinationMarkerRef.current.setIcon(destIcon);
+        destinationMarkerRef.current.setLatLng([destLat, destLng]);
+      }
+    } else if (destinationMarkerRef.current) {
+      destinationMarkerRef.current.remove();
+      destinationMarkerRef.current = null;
+    }
+
+    /* -- Agent / Courier Pin with Live Pulse (Orange 🚴) -- */
     if (isValid(agentLocation)) {
       const lat = Number(agentLocation.lat);
       const lng = Number(agentLocation.lng);
@@ -303,31 +397,83 @@ export default function LiveMap({
       } else {
         agentMarkerRef.current.setLatLng([lat, lng]);
       }
+    } else if (agentMarkerRef.current) {
+      agentMarkerRef.current.remove();
+      agentMarkerRef.current = null;
     }
 
-    /* -- Navigation Route Linking Agent -> Target -- */
-    if (isValid(agentLocation) && isValid(donorLocation)) {
-      drawRoute(
-        { lat: Number(agentLocation.lat), lng: Number(agentLocation.lng) },
-        { lat: Number(donorLocation.lat), lng: Number(donorLocation.lng) },
-        map, L
-      );
-    } else if (isValid(agentLocation)) {
-      if (autoFollow) map.setView([Number(agentLocation.lat), Number(agentLocation.lng)], 15);
-    } else if (isValid(donorLocation)) {
-      if (autoFollow) map.setView([Number(donorLocation.lat), Number(donorLocation.lng)], zoom);
+    /* ── Navigation Routing with Multi-leg display ── */
+    // Secondary route clean
+    if (secondaryRouteGroupRef.current) {
+      secondaryRouteGroupRef.current.clearLayers();
+    } else {
+      secondaryRouteGroupRef.current = L.layerGroup().addTo(map);
+    }
+
+    if (isPickedUp) {
+      // Picked Up: Main route is Agent -> Destination
+      if (isValid(agentLocation) && isValid(destinationLocation)) {
+        drawRoute(
+          { lat: Number(agentLocation.lat), lng: Number(agentLocation.lng) },
+          { lat: Number(destinationLocation.lat), lng: Number(destinationLocation.lng) },
+          map, L, 'TO DROP-OFF'
+        );
+        // Completed segment: dashed route from Donor -> Agent (subtle)
+        if (isValid(donorLocation)) {
+          L.polyline(
+            [[Number(donorLocation.lat), Number(donorLocation.lng)], [Number(agentLocation.lat), Number(agentLocation.lng)]],
+            { color: '#1BA672', weight: 3, dashArray: '4, 8', opacity: 0.6 }
+          ).addTo(secondaryRouteGroupRef.current);
+        }
+      } else if (isValid(agentLocation)) {
+        if (autoFollow) map.setView([Number(agentLocation.lat), Number(agentLocation.lng)], 15);
+      } else if (isValid(destinationLocation)) {
+        if (autoFollow) map.setView([Number(destinationLocation.lat), Number(destinationLocation.lng)], zoom);
+      }
+    } else {
+      // Before Pickup: Main route is Agent -> Donor Pickup
+      if (isValid(agentLocation) && isValid(donorLocation)) {
+        drawRoute(
+          { lat: Number(agentLocation.lat), lng: Number(agentLocation.lng) },
+          { lat: Number(donorLocation.lat), lng: Number(donorLocation.lng) },
+          map, L, 'TO PICKUP'
+        );
+
+        // Future leg: dashed route connecting Donor Pickup -> Destination
+        if (isValid(destinationLocation)) {
+          L.polyline(
+            [[Number(donorLocation.lat), Number(donorLocation.lng)], [Number(destinationLocation.lat), Number(destinationLocation.lng)]],
+            { color: '#2563EB', weight: 3.5, dashArray: '6, 8', opacity: 0.85 }
+          ).addTo(secondaryRouteGroupRef.current);
+        }
+      } else if (!isValid(agentLocation) && isValid(donorLocation) && isValid(destinationLocation)) {
+        // Agent GPS not streaming yet: draw full pickup-to-destination route
+        drawRoute(
+          { lat: Number(donorLocation.lat), lng: Number(donorLocation.lng) },
+          { lat: Number(destinationLocation.lat), lng: Number(destinationLocation.lng) },
+          map, L, 'PICKUP ➔ DROP-OFF'
+        );
+      } else if (isValid(agentLocation)) {
+        if (autoFollow) map.setView([Number(agentLocation.lat), Number(agentLocation.lng)], 15);
+      } else if (isValid(donorLocation)) {
+        if (autoFollow) map.setView([Number(donorLocation.lat), Number(donorLocation.lng)], zoom);
+      } else if (isValid(destinationLocation)) {
+        if (autoFollow) map.setView([Number(destinationLocation.lat), Number(destinationLocation.lng)], zoom);
+      }
     }
 
   }, [
     mapReady,
     agentLocation?.lat, agentLocation?.lng,
-    donorLocation?.lat, donorLocation?.lng,
+    donorLocation?.lat, donorLocation?.lng, donorLocation?.name, donorLocation?.address,
+    destinationLocation?.lat, destinationLocation?.lng, destinationLocation?.name, destinationLocation?.address,
+    isPickedUp,
     autoFollow,
     zoom,
     drawRoute
   ]);
 
-  /* ── Fit Bounds helper ── */
+  /* ── Fit Bounds helper: Fits ALL Active Points ── */
   const handleFitBounds = () => {
     const map = mapInstanceRef.current;
     const L   = window.L;
@@ -336,18 +482,25 @@ export default function LiveMap({
     const points = [];
     if (isValid(agentLocation)) points.push([Number(agentLocation.lat), Number(agentLocation.lng)]);
     if (isValid(donorLocation)) points.push([Number(donorLocation.lat), Number(donorLocation.lng)]);
+    if (isValid(destinationLocation)) points.push([Number(destinationLocation.lat), Number(destinationLocation.lng)]);
 
     if (points.length >= 2) {
       map.fitBounds(points, { padding: [60, 60], animate: true });
     } else if (points.length === 1) {
-      map.setView(points[0], 16, { animate: true });
+      map.setView(points[0], 15, { animate: true });
     }
   };
 
   /* ── External Google Maps GPS Turn-by-Turn Navigation Link ── */
   const getExternalNavUrl = () => {
+    if (isPickedUp && isValid(agentLocation) && isValid(destinationLocation)) {
+      return `https://www.google.com/maps/dir/?api=1&origin=${agentLocation.lat},${agentLocation.lng}&destination=${destinationLocation.lat},${destinationLocation.lng}&travelmode=driving`;
+    }
     if (isValid(agentLocation) && isValid(donorLocation)) {
       return `https://www.google.com/maps/dir/?api=1&origin=${agentLocation.lat},${agentLocation.lng}&destination=${donorLocation.lat},${donorLocation.lng}&travelmode=driving`;
+    }
+    if (isValid(destinationLocation)) {
+      return `https://www.google.com/maps/search/?api=1&query=${destinationLocation.lat},${destinationLocation.lng}`;
     }
     if (isValid(donorLocation)) {
       return `https://www.google.com/maps/search/?api=1&query=${donorLocation.lat},${donorLocation.lng}`;
@@ -359,9 +512,10 @@ export default function LiveMap({
   };
 
   const navUrl = getExternalNavUrl();
-  const hasAny   = isValid(agentLocation) || isValid(donorLocation);
+  const hasAny   = isValid(agentLocation) || isValid(donorLocation) || isValid(destinationLocation);
   const hasAgent = isValid(agentLocation);
   const hasDonor = isValid(donorLocation);
+  const hasDest  = isValid(destinationLocation);
 
   const waitingMsg = mode === 'donor'
     ? { icon: '🚴', title: 'Waiting for courier GPS…', sub: 'Live route tracking will display as soon as courier navigation begins' }
@@ -503,8 +657,8 @@ export default function LiveMap({
               boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
               border: '1px solid rgba(0,0,0,0.08)',
               display: 'flex',
-              alignItems: 'center',
-              gap: 12,
+              flexDirection: 'column',
+              gap: 4,
             }}
           >
             {routeLoading ? (
@@ -514,21 +668,26 @@ export default function LiveMap({
               </div>
             ) : (
               <>
-                {eta !== null && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#FC8019', lineHeight: 1 }}>{eta}</div>
-                    <div style={{ fontSize: 9, color: '#8E8E93', marginTop: 2, fontWeight: 700, letterSpacing: '0.05em' }}>MIN</div>
-                  </div>
-                )}
-                {eta !== null && distance !== null && (
-                  <div style={{ width: 1, height: 26, background: '#e5e7eb' }} />
-                )}
-                {distance !== null && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1BA672', lineHeight: 1 }}>{distance}</div>
-                    <div style={{ fontSize: 9, color: '#8E8E93', marginTop: 2, fontWeight: 700, letterSpacing: '0.05em' }}>KM</div>
-                  </div>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {eta !== null && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: isPickedUp ? '#2563EB' : '#FC8019', lineHeight: 1 }}>{eta}</div>
+                      <div style={{ fontSize: 9, color: '#8E8E93', marginTop: 2, fontWeight: 700, letterSpacing: '0.05em' }}>MIN</div>
+                    </div>
+                  )}
+                  {eta !== null && distance !== null && (
+                    <div style={{ width: 1, height: 26, background: '#e5e7eb' }} />
+                  )}
+                  {distance !== null && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: '#1BA672', lineHeight: 1 }}>{distance}</div>
+                      <div style={{ fontSize: 9, color: '#8E8E93', marginTop: 2, fontWeight: 700, letterSpacing: '0.05em' }}>KM</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 9, fontWeight: 800, color: isPickedUp ? '#2563EB' : '#FC8019', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  {targetLabel}
+                </div>
               </>
             )}
           </div>
@@ -659,28 +818,45 @@ export default function LiveMap({
         </div>
       )}
 
-      {/* BOTTOM INFO CHIP: WHEN ONLY DONOR PICKUP IS LOADED */}
-      {!hasAgent && hasDonor && (
+      {/* BOTTOM-LEFT MAP LEGEND / STATUS PILL */}
+      {hasAny && (
         <div
           style={{
             position: 'absolute',
             bottom: 12,
             left: 12,
-            background: 'rgba(27, 166, 114, 0.94)',
-            backdropFilter: 'blur(10px)',
-            color: 'white',
+            background: 'rgba(255, 255, 255, 0.94)',
+            backdropFilter: 'blur(12px)',
+            color: '#282C3F',
             borderRadius: 14,
-            padding: '6px 14px',
+            padding: '6px 12px',
             fontSize: 11,
             fontWeight: 700,
             zIndex: 600,
-            boxShadow: '0 4px 12px rgba(27, 166, 114, 0.3)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
+            border: '1px solid rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 10,
+            flexWrap: 'wrap',
+            maxWidth: 'calc(100% - 170px)',
           }}
         >
-          <span>{onlyDonorMsg}</span>
+          {hasAgent && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#FC8019' }}>
+              <span>🚴</span> <span>Courier</span>
+            </span>
+          )}
+          {hasDonor && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#1BA672' }}>
+              <span>🏠</span> <span>Pickup {isPickedUp ? '✓' : ''}</span>
+            </span>
+          )}
+          {hasDest && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563EB' }}>
+              <span>🏢</span> <span>Drop-off</span>
+            </span>
+          )}
         </div>
       )}
 

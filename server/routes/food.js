@@ -221,6 +221,9 @@ router.put('/:id/accept', protect, requireRole('admin'), async (req, res) => {
     post.status = 'agent_assigned';
     post.agentId = agentId;
     post.deliveryId = delivery._id;
+    if (adminLocation) {
+      post.adminLocation = adminLocation;
+    }
     const adminOrgName = req.user.organizationName || req.user.name;
     post.timestamps.push({ step: `Accepted by ${adminOrgName}`, time: new Date() });
     post.timestamps.push({ step: 'Agent Assigned', time: new Date() });
@@ -246,13 +249,15 @@ router.put('/:id/accept', protect, requireRole('admin'), async (req, res) => {
     const populatedPost = await FoodPost.findById(post._id)
       .populate('donorId', 'name email phone profilePhoto')
       .populate('agentId', 'name phone profilePhoto vehicleType')
-      .populate('adminId', 'name organizationName email')
-      .populate('claimedByAdmin', 'name organizationName email');
+      .populate('adminId', 'name organizationName email phone address')
+      .populate('claimedByAdmin', 'name organizationName email phone address')
+      .populate('deliveryId');
 
     // Notify delivery room
     req.io.to(`delivery:${delivery._id}`).emit('delivery:statusChanged', {
       deliveryId: delivery._id,
       status: 'agent_assigned',
+      adminLocation,
       step: `Accepted by ${adminOrgName} & Agent Assigned`
     });
 

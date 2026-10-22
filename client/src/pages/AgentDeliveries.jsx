@@ -198,19 +198,40 @@ export default function AgentDeliveries() {
     return null;
   };
 
-  const resolveTargetLoc = (sel) => {
+  const resolveDonorLoc = (sel) => {
     if (!sel) return null;
-    if (sel.status === 'picked_up') {
-      if (isValidLoc(sel.adminLocation)) return sel.adminLocation;
-      if (isValidLoc(sel.adminId?.location)) return sel.adminId.location;
-      return null;
-    }
     const candidates = [sel?.foodPostId?.location, sel?.donorId?.location];
-    for (const c of candidates) { if (isValidLoc(c)) return c; }
+    for (const c of candidates) {
+      if (isValidLoc(c)) {
+        return {
+          lat: Number(c.lat),
+          lng: Number(c.lng),
+          name: sel.foodPostId?.foodName ? `${sel.foodPostId.foodName} Pickup` : (sel.donorId?.name || 'Donor Pickup'),
+          address: c.address || sel.foodPostId?.pickupAddress || sel.donorId?.address || ''
+        };
+      }
+    }
     return null;
   };
 
-  const targetLoc = resolveTargetLoc(selected);
+  const resolveDestLoc = (sel) => {
+    if (!sel) return null;
+    const candidates = [sel.adminLocation, sel.foodPostId?.adminLocation, sel.adminId?.location];
+    for (const c of candidates) {
+      if (isValidLoc(c)) {
+        return {
+          lat: Number(c.lat),
+          lng: Number(c.lng),
+          name: sel.adminId?.organizationName || sel.adminId?.name || 'NGO Drop-off Facility',
+          address: c.address || sel.adminId?.address || 'NGO Distribution Center'
+        };
+      }
+    }
+    return null;
+  };
+
+  const donorLoc = resolveDonorLoc(selected);
+  const destinationLoc = resolveDestLoc(selected);
   const showMap  = selected && !['delivered','rejected_by_agent'].includes(selected.status);
 
   return (
@@ -368,7 +389,9 @@ export default function AgentDeliveries() {
                   <div className="p-4">
                     <LiveMap
                       agentLocation={agentLocation}
-                      donorLocation={targetLoc}
+                      donorLocation={donorLoc}
+                      destinationLocation={destinationLoc}
+                      isPickedUp={selected.status === 'picked_up'}
                       height="340px"
                       showETA={true}
                       mode="agent"
@@ -383,14 +406,20 @@ export default function AgentDeliveries() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="w-5 h-5 rounded-full bg-[#1BA672] flex items-center justify-center text-[10px]">🏠</div>
-                      <span>Pickup point</span>
+                      <span>Pickup point {selected.status === 'picked_up' ? '(Completed)' : ''}</span>
                     </div>
+                    {destinationLoc && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full bg-[#2563EB] flex items-center justify-center text-[10px]">🏢</div>
+                        <span>Drop-off destination</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5">
                       <div className="w-8 h-1 rounded bg-[#FC8019]"/>
                       <span>Route</span>
                     </div>
-                    {!isValidLoc(targetLoc) && (
-                      <span className="text-amber-500">⚠️ Destination location not saved for this order</span>
+                    {!destinationLoc && (
+                      <span className="text-amber-500">⚠️ Destination location awaiting admin drop-off pin</span>
                     )}
                   </div>
                 </motion.div>

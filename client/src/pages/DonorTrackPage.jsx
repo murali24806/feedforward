@@ -141,17 +141,39 @@ export default function DonorTrackPage() {
   // Use agent location from socket OR from saved delivery record
   const mapAgentLoc = agentLocation || (isValidLocation(delivery?.agentLocation) ? delivery.agentLocation : null);
   
-  // Resolve target location based on status
-  const resolveTargetLoc = (post, del) => {
-    if (post?.status === 'picked_up') {
-      if (isValidLocation(del?.adminLocation)) return del.adminLocation;
-      if (isValidLocation(del?.adminId?.location)) return del.adminId.location;
-      return null;
-    }
-    return isValidLocation(post?.location) ? post.location : null;
+  // Pickup Point Location (Donor's doorstep)
+  const mapDonorLoc = isValidLocation(selected?.location)
+    ? {
+        lat: selected.location.lat,
+        lng: selected.location.lng,
+        name: selected.foodName ? `${selected.foodName} Pickup` : 'Your Pickup Location',
+        address: selected.location.address || ''
+      }
+    : null;
+
+  // Delivery Destination Location (NGO Drop-off Center captured by Admin)
+  const resolveDestLoc = (post, del) => {
+    const rawDest = isValidLocation(del?.adminLocation)
+      ? del.adminLocation
+      : isValidLocation(post?.adminLocation)
+      ? post.adminLocation
+      : isValidLocation(del?.adminId?.location)
+      ? del.adminId.location
+      : isValidLocation(post?.adminId?.location)
+      ? post.adminId.location
+      : null;
+
+    if (!rawDest) return null;
+    const orgName = post?.claimedByAdmin?.organizationName || post?.adminId?.organizationName || del?.adminId?.organizationName || 'NGO Drop-off Facility';
+    return {
+      lat: rawDest.lat,
+      lng: rawDest.lng,
+      name: orgName,
+      address: rawDest.address || 'NGO Distribution Center'
+    };
   };
-  
-  const mapDonorLoc = resolveTargetLoc(selected, delivery);
+
+  const mapDestLoc = resolveDestLoc(selected, delivery);
 
   return (
     <DashboardLayout title="My Donations">
@@ -260,6 +282,14 @@ export default function DonorTrackPage() {
                           🏢 Assigned to: {selected.adminId?.organizationName || selected.adminId?.name || 'Assigned NGO'}
                         </span>
                       )}
+
+                      {/* Destination Details Strip */}
+                      {mapDestLoc && (
+                        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-[#2563EB] bg-blue-50/80 px-2.5 py-1 rounded-lg border border-blue-200/60 font-medium">
+                          <span>🏢</span>
+                          <span>Drop-off Destination: <strong>{mapDestLoc.name}</strong> · {mapDestLoc.address}</span>
+                        </div>
+                      )}
                     </div>
 
                     {selected.description && (
@@ -311,7 +341,9 @@ export default function DonorTrackPage() {
                     <LiveMap
                       agentLocation={mapAgentLoc}
                       donorLocation={mapDonorLoc}
-                      height="320px"
+                      destinationLocation={mapDestLoc}
+                      isPickedUp={selected.status === 'picked_up'}
+                      height="330px"
                       showETA={true}
                       mode="donor"
                     />

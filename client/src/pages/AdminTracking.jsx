@@ -314,24 +314,26 @@ export default function AdminTracking() {
         }
       }
 
-      if (del.status === 'picked_up' && !adminMarkersRef.current[del._id]) {
+      if (!adminMarkersRef.current[del._id]) {
         let loc = null;
         if (isValidLoc(del.adminLocation)) loc = del.adminLocation;
+        else if (isValidLoc(del.foodPostId?.adminLocation)) loc = del.foodPostId.adminLocation;
         else if (isValidLoc(del.adminId?.location)) loc = del.adminId.location;
 
         if (isValidLoc(loc)) {
+          const orgName = del.adminId?.organizationName || del.adminId?.name || 'NGO Facility';
           const icon = L.divIcon({
             html: `<div style="
-              width:42px;height:42px;background:#3B82F6;border-radius:50%;
+              width:42px;height:42px;background:linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);border-radius:50%;
               border:3px solid white;display:flex;align-items:center;justify-content:center;
-              font-size:18px;box-shadow:0 4px 12px rgba(59,130,246,0.5)">🏢</div>`,
+              font-size:18px;box-shadow:0 4px 12px rgba(37,99,235,0.5)">🏢</div>`,
             className: '', iconSize: [42,42], iconAnchor: [21,21],
           });
 
           adminMarkersRef.current[del._id] = L.marker(
             [Number(loc.lat), Number(loc.lng)], { icon }
           ).addTo(map)
-           .bindPopup(`<b>📍 Drop-off</b><br/>Admin Location`)
+           .bindPopup(`<b>🏢 Drop-off Destination</b><br/>${orgName}<br/><span style="font-size:11px;color:#666">${loc.address || 'Distribution Center'}</span>`)
            .on('click', () => focusDelivery(del));
         }
       }

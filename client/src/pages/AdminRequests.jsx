@@ -184,7 +184,14 @@ export default function AdminRequests() {
     }
     setActionLoading(true);
     try {
-      await acceptFood(postId, assignAgentId, { lat: adminLoc.lat, lng: adminLoc.lng, address: 'Admin Location' });
+      const orgAddress = user?.organizationName
+        ? `${user.organizationName} Center`
+        : (user?.address || 'NGO Distribution Center');
+      await acceptFood(postId, assignAgentId, {
+        lat: adminLoc.lat,
+        lng: adminLoc.lng,
+        address: orgAddress
+      });
       setPosts(p => p.map(post => post._id === postId ? { ...post, status: 'agent_assigned' } : post));
       setSelected(null);
     } catch (err) {
@@ -380,15 +387,35 @@ export default function AdminRequests() {
                 const isAssigned = ['agent_assigned', 'in_transit', 'picked_up'].includes(selected.status);
                 const isPickedUp = selected.status === 'picked_up';
                 
-                // Destination target: if picked up, courier is delivering to NGO drop-off; otherwise to donor
-                const targetLoc = isPickedUp
-                  ? (selectedDelivery?.adminLocation?.lat ? selectedDelivery.adminLocation : (adminLoc?.lat ? adminLoc : selected.location))
-                  : selected.location;
+                // Pickup Point (Donor Doorstep)
+                const donorLoc = {
+                  lat: Number(selected.location.lat),
+                  lng: Number(selected.location.lng),
+                  name: selected.foodName ? `${selected.foodName} Pickup` : 'Donor Pickup',
+                  address: selected.location.address || ''
+                };
+
+                // Drop-off Destination (NGO Facility)
+                const destRaw = selectedDelivery?.adminLocation?.lat
+                  ? selectedDelivery.adminLocation
+                  : selected.adminLocation?.lat
+                  ? selected.adminLocation
+                  : adminLoc?.lat
+                  ? { lat: adminLoc.lat, lng: adminLoc.lng, address: user?.organizationName ? `${user.organizationName} Center` : 'Your NGO Center' }
+                  : null;
+
+                const destinationLoc = destRaw ? {
+                  lat: Number(destRaw.lat),
+                  lng: Number(destRaw.lng),
+                  name: user?.organizationName || 'Your NGO Center',
+                  address: destRaw.address || 'NGO Distribution Facility'
+                } : null;
 
                 // Courier live location: from socket or loaded delivery record
                 const currentAgentLoc = liveAgentLoc || (selectedDelivery?.agentLocation?.lat ? selectedDelivery.agentLocation : null);
                 const agent = selected.agentId || selectedDelivery?.agentId;
                 const vehicle = agent?.vehicleType || 'Courier';
+                const navTarget = (isPickedUp && destinationLoc) ? destinationLoc : donorLoc;
 
                 return (
                   <div className="card space-y-3">
@@ -412,9 +439,9 @@ export default function AdminRequests() {
                       {/* External Maps Navigation Link */}
                       <a
                         href={
-                          currentAgentLoc && targetLoc
-                            ? `https://www.google.com/maps/dir/?api=1&origin=${currentAgentLoc.lat},${currentAgentLoc.lng}&destination=${targetLoc.lat},${targetLoc.lng}&travelmode=driving`
-                            : `https://www.google.com/maps/search/?api=1&query=${targetLoc.lat},${targetLoc.lng}`
+                          currentAgentLoc && navTarget
+                            ? `https://www.google.com/maps/dir/?api=1&origin=${currentAgentLoc.lat},${currentAgentLoc.lng}&destination=${navTarget.lat},${navTarget.lng}&travelmode=driving`
+                            : `https://www.google.com/maps/search/?api=1&query=${navTarget.lat},${navTarget.lng}`
                         }
                         target="_blank"
                         rel="noopener noreferrer"
@@ -430,11 +457,13 @@ export default function AdminRequests() {
                     <div className="rounded-2xl overflow-hidden shadow-inner">
                       <LiveMap
                         agentLocation={currentAgentLoc}
-                        donorLocation={targetLoc}
-                        height="280px"
+                        donorLocation={donorLoc}
+                        destinationLocation={destinationLoc}
+                        isPickedUp={isPickedUp}
+                        height="290px"
                         showETA={true}
                         mode="admin"
-                        zoom={15}
+                        zoom={14}
                       />
                     </div>
 

@@ -17,6 +17,11 @@ const foodPostSchema = new mongoose.Schema({
     lng: { type: Number },
     address: { type: String }
   },
+  adminLocation: {
+    lat: { type: Number },
+    lng: { type: Number },
+    address: { type: String }
+  },
   status: {
     type: String,
     enum: ['pending', 'accepted', 'agent_assigned', 'picked_up', 'delivered', 'rejected'],
