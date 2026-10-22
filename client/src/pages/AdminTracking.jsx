@@ -510,7 +510,7 @@ export default function AdminTracking() {
         }`}
       >
         {/* Floating Top Controls: Layer Switcher + Recenter + Fullscreen */}
-        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-2">
+        <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-[1000] flex items-center gap-1.5 sm:gap-2 max-w-[calc(100%-20px)]">
           {/* Layer switcher */}
           <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1 flex shadow-md border border-black/10">
             {Object.entries(TILE_LAYERS).map(([key, item]) => {
@@ -520,14 +520,14 @@ export default function AdminTracking() {
                   key={key}
                   type="button"
                   onClick={() => changeTileLayer(key)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
                     isSelected
                       ? 'bg-[#FC8019] text-white shadow-sm'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span className="hidden sm:inline">{item.name}</span>
+                  <span className="hidden md:inline">{item.name}</span>
                 </button>
               );
             })}
@@ -537,7 +537,7 @@ export default function AdminTracking() {
           <button
             type="button"
             onClick={recenterAll}
-            className="bg-white/95 backdrop-blur-md border border-black/10 text-gray-800 rounded-xl px-3 py-2 text-xs font-bold shadow-md hover:bg-gray-50 flex items-center gap-1.5 active:scale-95 transition-all"
+            className="bg-white/95 backdrop-blur-md border border-black/10 text-gray-800 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold shadow-md hover:bg-gray-50 flex items-center gap-1 active:scale-95 transition-all"
             title="Recenter view on all active couriers"
           >
             <span>🎯</span>
@@ -548,7 +548,7 @@ export default function AdminTracking() {
           <button
             type="button"
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="bg-white/95 backdrop-blur-md border border-black/10 text-gray-800 rounded-xl w-8 h-8 flex items-center justify-center text-xs font-bold shadow-md hover:bg-gray-50 active:scale-95 transition-all"
+            className="bg-white/95 backdrop-blur-md border border-black/10 text-gray-800 rounded-xl w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs font-bold shadow-md hover:bg-gray-50 active:scale-95 transition-all"
             title={isFullscreen ? 'Exit Fullscreen' : 'Expand Fullscreen Radar'}
           >
             {isFullscreen ? '✕' : '⛶'}
@@ -562,7 +562,7 @@ export default function AdminTracking() {
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 15, scale: 0.95 }}
-              className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-[1000] bg-white/95 backdrop-blur-xl rounded-2xl p-4 shadow-2xl border border-black/10"
+              className="absolute bottom-20 sm:bottom-4 left-3 right-3 sm:left-4 sm:right-auto sm:max-w-md z-[1000] bg-white/95 backdrop-blur-xl rounded-2xl p-3.5 sm:p-4 shadow-2xl border border-black/10 max-h-[60vh] overflow-y-auto"
             >
               {/* HUD Header */}
               <div className="flex items-start justify-between gap-3 mb-2">
@@ -662,7 +662,7 @@ export default function AdminTracking() {
             Agent GPS not active yet — markers will appear once agents start navigation
           </div>
         )}
-        <div ref={mapRef} style={{ height: isFullscreen ? '100vh' : '480px' }} />
+        <div ref={mapRef} className={isFullscreen ? 'h-screen w-full' : 'h-[320px] sm:h-[400px] lg:h-[480px] w-full'} />
       </div>
 
       {/* Delivery cards */}

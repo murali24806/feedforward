@@ -201,22 +201,46 @@
   background: rgba(142, 142, 147, 0.7);
 }
 
-/* === Leaflet Map iOS Styling === */
+/* === Leaflet Map Responsive & iOS Styling === */
 .leaflet-container {
-  border-radius: 22px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 20px !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.06) !important;
-  z-index: 0;
+  z-index: 10 !important;
+  touch-action: pan-x pan-y !important;
+}
+
+@media (max-width: 640px) {
+  .leaflet-container {
+    border-radius: 16px !important;
+  }
+}
+
+/* Ensure Leaflet controls stay underneath app sidebars and mobile sheets */
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 800 !important;
+}
+.leaflet-pane {
+  z-index: 400 !important;
+}
+
+/* === Responsive Utilities for Mobile & Touch === */
+img, video {
+  max-width: 100%;
+  height: auto;
 }
 
 /* === iOS Safe Area & Accessibility === */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
-    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(0.6rem + env(safe-area-inset-bottom));
   }
 }
 
-button:focus-visible, a:focus-visible, input:focus-visible {
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid #FF9500;
   outline-offset: 2px;
 }

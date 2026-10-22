@@ -58,13 +58,13 @@ export default function Sidebar({ mobileOpen, onClose }) {
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
-            className="lg:hidden fixed inset-0 bg-black/60 z-30 backdrop-blur-md" 
+            className="lg:hidden fixed inset-0 bg-black/60 z-[1100] backdrop-blur-md" 
             onClick={onClose} 
           />
         )}
       </AnimatePresence>
 
-      <aside className={`sidebar transition-transform duration-300 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`sidebar z-[1200] transition-transform duration-300 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         {/* Brand Header */}
         <div className="p-6 pb-4">
           <div className="flex items-center gap-3.5">

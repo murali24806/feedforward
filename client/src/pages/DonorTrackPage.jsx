@@ -171,12 +171,12 @@ export default function DonorTrackPage() {
               <button onClick={() => navigate('/donor/post')} className="btn-primary mt-3 text-sm px-4 py-2">Post Food</button>
             </div>
           ) : (
-            <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+            <div className="flex lg:flex-col overflow-x-auto lg:overflow-y-auto gap-3 pb-2 lg:pb-0 lg:max-h-[calc(100vh-200px)] pr-1">
               {posts.map((post) => (
                 <div
                   key={post._id}
                   onClick={() => selectPost(post)}
-                  className={`card cursor-pointer transition-all hover:shadow-lg ${selected?._id === post._id ? 'ring-2 ring-[#1BA672]' : ''}`}
+                  className={`card cursor-pointer transition-all hover:shadow-lg min-w-[240px] sm:min-w-[280px] lg:min-w-0 ${selected?._id === post._id ? 'ring-2 ring-[#1BA672]' : ''}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-[#1BA672]/10 flex items-center justify-center overflow-hidden flex-shrink-0">
